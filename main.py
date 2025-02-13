@@ -1,5 +1,6 @@
 import pygame
 from pygame.sprite import * 
+from typing import Tuple
 
 class Tile:
     def __init__(self, isWall: bool):
@@ -25,28 +26,86 @@ class Map:
                     pygame.draw.rect(surface, 'white', (x * self.tileSize, y * self.tileSize, self.tileSize, self.tileSize))
         return surface
 
-class Pacman(pygame.sprite.Sprite):
-    def __init__(self, map, *groups):
+    def isIntersect(self, x : int, y: int) -> bool:
+        tileX = x // self.tileSize
+        tileY = y // self.tileSize
+        if(tileX < 0 or 
+        tileY < 0 or 
+        tileX >= self.width or 
+        tileY >= self.height or 
+        self.data[tileY][tileX].isWall):
+            #print(f"X{x} Y{y} Xtile{tileX} Ytile{tileY}")
+            return True
+        return False
+
+class Pacman(Sprite):
+    def __init__(self, map : Map, *groups):
         super().__init__(*groups)
-        self.image = pygame.Surface((map.tileSize, map.tileSize))
-        self.image.fill('yellow')
-        self.rect = pygame.Rect(map.playerStartPos[0] * map.tileSize, 
-                                 map.playerStartPos[1] * map.tileSize, 
-                                 map.tileSize, map.tileSize)
+        self.frames = [pygame.transform.scale(pygame.image.load(f"frames/frame_{i}.png").convert(), (map.tileSize,map.tileSize)) for i in range(5)]
+        self.currentFrame = 0
+        self.frameCounter = 3
+        self.image = self.frames[0]
+        self.angle = 0 
+        self.rect = pygame.Rect(map.playerStartPos[0]*map.tileSize , map.playerStartPos[1]*map.tileSize, map.tileSize - 1, map.tileSize - 1)
         self.map = map
+
+    def __updateImage(self):
+        self.image = pygame.transform.rotate(self.frames[self.currentFrame], self.angle)
+
+    def update(self, *args, **kwargs):
+        
+        if(self.frameCounter != 0):
+            self.frameCounter -= 1
+            return super().update(*args, **kwargs)
+        
+        if(self.currentFrame == 4):
+            self.currentFrame = 0
+        else:
+            self.currentFrame += 1
+        self.__updateImage()
+        self.frameCounter = 3
+        return super().update(*args, **kwargs)
+
     
-    def canMove(self, dx, dy):
-        new_x = self.rect.centerx + dx
-        new_y = self.rect.centery + dy
-        tile_x = new_x // self.map.tileSize
-        tile_y = new_y // self.map.tileSize
-        return not self.map.isWall(tile_x, tile_y)
-    
-    def move(self, dx, dy):
-        if dx != 0 and self.canMove(dx, 0):
-            self.rect.x += dx
-        elif dy != 0 and self.canMove(0, dy):
-            self.rect.y += dy
+
+    def moveUp(self, step):
+        #print(self.rect.topleft)
+        if(self.map.isIntersect(*(self.rect.move(0, -step).topleft)) or 
+        self.map.isIntersect(*(self.rect.move(0, -step).topright))):
+            return
+        self.angle = 90
+        self.__updateImage()
+        self.rect = self.rect.move(0, -step)
+
+    def moveDown(self, step):
+        #print(self.rect.topleft)
+        if(self.map.isIntersect(*(self.rect.move(0, step).bottomleft)) or 
+        self.map.isIntersect(*(self.rect.move(0, step).bottomright))):
+            return
+        self.angle = 270
+        self.__updateImage()
+        self.rect = self.rect.move(0, step)
+
+    def moveLeft(self, step):
+        #print(self.rect.topleft)
+        if(self.map.isIntersect(*(self.rect.move(-step, 0).topleft)) or 
+        self.map.isIntersect(*(self.rect.move(-step, 0).bottomleft))):
+            return
+        self.angle = 180
+        self.__updateImage()
+        self.rect = self.rect.move(-step, 0)
+
+    def moveRight(self, step):
+        #print(self.rect.topleft)
+        if(self.map.isIntersect(*(self.rect.move(step, 0).topright)) or 
+        self.map.isIntersect(*(self.rect.move(step, 0).bottomright))):
+            return
+        self.angle = 0
+        self.__updateImage()
+        self.rect = self.rect.move(step, 0)
+
+    def getTile(self) -> Tuple[int, int]:
+        return (self.rect.topleft[0] // self.map.tileSize, self.rect.topleft[0] // self.map.tileSize)
 
 
 
@@ -83,13 +142,13 @@ while running:
 
     keys = pygame.key.get_pressed()
     if keys[pygame.K_w]:
-        player.move(0, -4)
-    elif keys[pygame.K_s]:
-        player.move(0, 4)
-    elif keys[pygame.K_a]:
-        player.move(-4, 0)
-    elif keys[pygame.K_d]:
-        player.move(4, 0)
+        player.moveUp(4)
+    if keys[pygame.K_s]:
+        player.moveDown(4)
+    if keys[pygame.K_a]:
+        player.moveLeft(4)
+    if keys[pygame.K_d]:
+        player.moveRight(4)
 
     renderGroup.draw(screen)
     player.update()
