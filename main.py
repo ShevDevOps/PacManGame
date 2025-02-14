@@ -3,9 +3,20 @@ from pygame.sprite import *
 from typing import Tuple, List
 
 class Tile:
-    def __init__(self, isWall: bool):
-        self.isWall = isWall
-
+    def __init__(self, s: str):
+        self.isWall = False
+        self.hasDot = False
+        self.hasPill = False
+        if(s == '#'):
+            self.isWall = True
+            self.isRetPass = False
+        elif(s == 'R' or s == 'G'):
+            self.isWall = True
+        elif(s == 'D'):
+            self.hasDot = True
+        elif(s == 'P'):
+            self.hasPill = True
+        
 class AlighnedSprite(Sprite):
     def __init__(self, map : "Map", image : pygame.Surface, x : int, y : int, *groups):
         super().__init__(*groups)
@@ -14,7 +25,7 @@ class AlighnedSprite(Sprite):
 
 class Map:
     def __init__(self, tileSize: int, data: str):
-        self.data = [[Tile(c == '#') for c in row] for row in data.split('\n')]
+        self.data = [[Tile(c) for c in row] for row in data.split('\n')]
         self.height = len(self.data)
         self.width = len(self.data[0])
         self.tileSize = tileSize
@@ -137,11 +148,11 @@ class Map:
         pillImage = pygame.transform.scale(pygame.image.load("dots/pill.png").convert(), (self.tileSize, self.tileSize))
         pillImage.set_colorkey(pygame.Color(0,0,0))
         for y in range(self.height):
-            for x in range(self.width):pass
-                # if(self.data[y][x].hasDot):
-                #     AlighnedSprite(self, dotImage, x, y, self.dots)
-                # if(self.data[y][x].hasPill):
-                #     AlighnedSprite(self, pillImage, x, y, self.powerPills)
+            for x in range(self.width):
+                if(self.data[y][x].hasDot):
+                    AlighnedSprite(self, dotImage, x, y, self.dots)
+                if(self.data[y][x].hasPill):
+                    AlighnedSprite(self, pillImage, x, y, self.powerPills)
 
 class Pacman(Sprite):
     def __init__(self, map : Map, *groups):
@@ -231,6 +242,7 @@ gameMap.updateDots()
 
 renderGroup = RenderPlain()
 player = Pacman(gameMap, renderGroup)
+renderGroup.add(*gameMap.dots.sprites(), *gameMap.powerPills.sprites())
 
 while running:
     # poll for events
