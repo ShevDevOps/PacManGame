@@ -17,14 +17,89 @@ class Map:
     def isWall(self, x: int, y: int) -> bool:
         return not (0 <= x < self.width and 0 <= y < self.height) or self.data[y][x].isWall
     
-    def generateImage(self) -> pygame.Surface:
-        surface = pygame.Surface((self.width * self.tileSize, self.height * self.tileSize))
-        surface.fill('black')
-        for y in range(self.height):
-            for x in range(self.width):
-                if self.isWall(x, y):
-                    pygame.draw.rect(surface, 'white', (x * self.tileSize, y * self.tileSize, self.tileSize, self.tileSize))
-        return surface
+    def blitTile(self, surface : pygame.Surface, tile : pygame.Surface, x : int, y : int, angle : float = 0):
+        surface.blit(pygame.transform.rotate(tile, angle), (x * self.tileSize + self.tileSize/2, y * self.tileSize + self.tileSize/2))
+
+    def generateImage(self) -> pygame.Surface: 
+        result = pygame.Surface((self.tileSize*len(self.data[0]) + self.tileSize/2, self.tileSize*len(self.data) + self.tileSize/2))
+        result.fill('black')
+        cornerTile = pygame.transform.scale(pygame.image.load(f"tiles/cornerTile.png").convert(), (self.tileSize, self.tileSize))
+        straightTile = pygame.transform.scale(pygame.image.load(f"tiles/straightTile.png").convert(), (self.tileSize, self.tileSize))
+        passageTile = pygame.transform.scale(pygame.image.load(f"tiles/passageTile.png").convert(), (self.tileSize, self.tileSize))
+
+        for y in range(1, len(self.data) - 1):
+            for x in range(1, len(self.data[y]) -1):
+                if(self.isWall(x, y) and
+                self.isWall(x + 1, y) and
+                self.isWall(x, y + 1) and
+                self.isWall(x + 1, y + 1)):
+                    self.blitTile(result, passageTile, x, y)
+                elif(not self.isWall(x, y) and
+                not self.isWall(x + 1, y) and
+                not self.isWall(x, y + 1) and
+                not self.isWall(x + 1, y + 1)):
+                    self.blitTile(result, passageTile, x, y)
+                elif(not self.isWall(x, y) and
+                not self.isWall(x + 1, y) and
+                not self.isWall(x, y + 1) and
+                self.isWall(x + 1, y + 1)):
+                    self.blitTile(result, cornerTile, x, y)
+                elif(self.isWall(x, y) and
+                self.isWall(x + 1, y) and
+                self.isWall(x, y + 1) and
+                not self.isWall(x + 1, y + 1)):
+                    self.blitTile(result, cornerTile, x, y)
+                elif(self.isWall(x, y) and
+                not self.isWall(x + 1, y) and
+                self.isWall(x, y + 1) and
+                self.isWall(x + 1, y + 1)):
+                    self.blitTile(result, cornerTile, x, y, 90)
+                elif(not self.isWall(x, y) and
+                self.isWall(x + 1, y) and
+                not self.isWall(x, y + 1) and
+                not self.isWall(x + 1, y + 1)):
+                    self.blitTile(result, cornerTile, x, y, 90)
+                elif(not self.isWall(x, y) and
+                self.isWall(x + 1, y) and
+                self.isWall(x, y + 1) and
+                self.isWall(x + 1, y + 1)):
+                    self.blitTile(result, cornerTile, x, y, 180)
+                elif(self.isWall(x, y) and
+                not self.isWall(x + 1, y) and
+                not self.isWall(x, y + 1) and
+                not self.isWall(x + 1, y + 1)):
+                    self.blitTile(result, cornerTile, x, y, 180)
+                elif(self.isWall(x, y) and
+                self.isWall(x + 1, y) and
+                not self.isWall(x, y + 1) and
+                self.isWall(x + 1, y + 1)):
+                    self.blitTile(result, cornerTile, x, y, 270)
+                elif(not self.isWall(x, y) and
+                not self.isWall(x + 1, y) and
+                self.isWall(x, y + 1) and
+                not self.isWall(x + 1, y + 1)):
+                    self.blitTile(result, cornerTile, x, y, 270)
+                elif(self.isWall(x, y) and
+                not self.isWall(x + 1, y) and
+                self.isWall(x, y + 1) and
+                not self.isWall(x + 1, y + 1)):
+                    self.blitTile(result, straightTile, x, y)
+                elif(not self.isWall(x, y) and
+                self.isWall(x + 1, y) and
+                not self.isWall(x, y + 1) and
+                self.isWall(x + 1, y + 1)):
+                    self.blitTile(result, straightTile, x, y)
+                elif(not self.isWall(x, y) and
+                not self.isWall(x + 1, y) and
+                self.isWall(x, y + 1) and
+                self.isWall(x + 1, y + 1)):
+                    self.blitTile(result, straightTile, x, y, 90)
+                elif(self.isWall(x, y) and
+                self.isWall(x + 1, y) and
+                not self.isWall(x, y + 1) and
+                not self.isWall(x + 1, y + 1)):
+                    self.blitTile(result, straightTile, x, y, 90)
+        return result
 
     def isIntersect(self, x : int, y: int) -> bool:
         tileX = x // self.tileSize
@@ -117,7 +192,7 @@ clock = pygame.time.Clock()
 running = True
 dt = 0 
 
-with open("mapData.txt", 'r') as file:
+with open("map/mapData.txt", 'r') as file:
     mapData = file.read()
 
 gameMap = Map(16, mapData)
