@@ -1,10 +1,16 @@
 import pygame
 from pygame.sprite import * 
-from typing import Tuple
+from typing import Tuple, List
 
 class Tile:
     def __init__(self, isWall: bool):
         self.isWall = isWall
+
+class AlighnedSprite(Sprite):
+    def __init__(self, map : "Map", image : pygame.Surface, x : int, y : int, *groups):
+        super().__init__(*groups)
+        self.image = image
+        self.rect = (x * map.tileSize, y * map.tileSize, map.tileSize, map.tileSize)
 
 class Map:
     def __init__(self, tileSize: int, data: str):
@@ -12,6 +18,8 @@ class Map:
         self.height = len(self.data)
         self.width = len(self.data[0])
         self.tileSize = tileSize
+        self.dots : Group = Group()
+        self.powerPills : Group = Group()
         self.playerStartPos = next(((x, y) for y, row in enumerate(data.split('\n')) for x, c in enumerate(row) if c == 'C'), (0, 0))
     
     def isWall(self, x: int, y: int) -> bool:
@@ -112,6 +120,28 @@ class Map:
             #print(f"X{x} Y{y} Xtile{tileX} Ytile{tileY}")
             return True
         return False
+    
+    def killSprites(self, group : Group):
+        spritesList : List[Sprite] = group.sprites()
+        group.empty()
+        for sprite in spritesList:
+            sprite.kill()
+
+    def updateDots(self):
+        
+        self.killSprites(self.dots)
+        self.killSprites(self.powerPills)
+
+        dotImage = pygame.transform.scale(pygame.image.load("dots/dot.png").convert(), (self.tileSize, self.tileSize))
+        dotImage.set_colorkey(pygame.Color(0,0,0))
+        pillImage = pygame.transform.scale(pygame.image.load("dots/pill.png").convert(), (self.tileSize, self.tileSize))
+        pillImage.set_colorkey(pygame.Color(0,0,0))
+        for y in range(self.height):
+            for x in range(self.width):pass
+                # if(self.data[y][x].hasDot):
+                #     AlighnedSprite(self, dotImage, x, y, self.dots)
+                # if(self.data[y][x].hasPill):
+                #     AlighnedSprite(self, pillImage, x, y, self.powerPills)
 
 class Pacman(Sprite):
     def __init__(self, map : Map, *groups):
@@ -197,6 +227,7 @@ with open("map/mapData.txt", 'r') as file:
 
 gameMap = Map(16, mapData)
 background = gameMap.generateImage()
+gameMap.updateDots()
 
 renderGroup = RenderPlain()
 player = Pacman(gameMap, renderGroup)
