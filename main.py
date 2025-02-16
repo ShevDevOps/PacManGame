@@ -235,7 +235,7 @@ class Game:
     
     def update(self):
         self.screen.fill("black")
-        self.screen.blit(background, (0, 0))
+        self.screen.blit(self.background, (0, 0))
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_w]:
