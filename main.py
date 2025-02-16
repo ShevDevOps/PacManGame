@@ -232,6 +232,7 @@ screen = pygame.display.set_mode((470, 510))
 clock = pygame.time.Clock()
 running = True
 dt = 0 
+score = 0
 
 with open("map/mapData.txt", 'r') as file:
     mapData = file.read()
@@ -267,7 +268,8 @@ while running:
         player.moveLeft(4)
     if keys[pygame.K_d]:
         player.moveRight(4)
-
+    score += len(spritecollide(player, gameMap.dots, True))
+    pillsColide = len(spritecollide(player, gameMap.powerPills, True))
     renderGroup.draw(screen)
     player.update()
 
