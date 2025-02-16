@@ -224,7 +224,33 @@ class Pacman(Sprite):
         return (self.rect.topleft[0] // self.map.tileSize, self.rect.topleft[0] // self.map.tileSize)
 
 
+class Game:
+    def __init__(self, screen : pygame.Surface ,map : Map, pacman : Pacman):
+        self.screen = screen
+        self.map = map
+        self.map.updateDots()
+        self.background = self.map.generateImage()
+        self.pacman = pacman
+        self.renderGroup = Group(self.pacman)
+    
+    def update(self):
+        self.screen.fill("black")
+        self.screen.blit(background, (0, 0))
 
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_w]:
+            self.pacman.moveUp(4)
+        if keys[pygame.K_s]:
+            self.pacman.moveDown(4)
+        if keys[pygame.K_a]:
+            self.pacman.moveLeft(4)
+        if keys[pygame.K_d]:
+            self.pacman.moveRight(4)
+
+        self.map.dots.draw(self.screen)
+        self.map.powerPills.draw(self.screen)
+        self.renderGroup.draw(self.screen)
+        self.pacman.update()
 
 # pygame setup
 pygame.init()
@@ -237,12 +263,8 @@ with open("map/mapData.txt", 'r') as file:
     mapData = file.read()
 
 gameMap = Map(16, mapData)
-background = gameMap.generateImage()
-gameMap.updateDots()
-
-renderGroup = RenderPlain()
-player = Pacman(gameMap, renderGroup)
-renderGroup.add(*gameMap.dots.sprites(), *gameMap.powerPills.sprites())
+player = Pacman(gameMap)
+gameObj = Game(screen, gameMap, player)
 
 while running:
     # poll for events
@@ -251,27 +273,7 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-    # fill the screen with a color to wipe away anything from last frame
-    screen.fill("black")
-    screen.blit(background, (0, 0))
-    
-
-    #pygame.draw.circle(screen, "red", player_pos, 40)
-
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_w]:
-        player.moveUp(4)
-    if keys[pygame.K_s]:
-        player.moveDown(4)
-    if keys[pygame.K_a]:
-        player.moveLeft(4)
-    if keys[pygame.K_d]:
-        player.moveRight(4)
-
-    renderGroup.draw(screen)
-    player.update()
-
-
+    gameObj.update()
     # flip() the display to put your work on screen
     pygame.display.flip()
 
