@@ -245,7 +245,9 @@ class Game:
         self.background = self.map.generateImage()
         self.pacman = pacman
         self.renderGroup = Group(self.pacman)
-    
+        self.currentLevel = 0
+        self.score = 0
+
     def update(self):
         self.screen.fill("black")
         self.screen.blit(self.background, (0, 0))
@@ -264,6 +266,11 @@ class Game:
         self.map.powerPills.draw(self.screen)
         self.renderGroup.draw(self.screen)
         self.pacman.update()
+
+        self.score += len(spritecollide(self.pacman, gameMap.dots, True))
+        pillsColide = len(spritecollide(self.pacman, gameMap.powerPills, True))
+        if(pillsColide > 0):
+            self.score += pillsColide*10
 
 # pygame setup
 pygame.init()
