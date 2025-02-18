@@ -165,6 +165,15 @@ class Pacman(Sprite):
         self.rect = pygame.Rect(map.playerStartPos[0]*map.tileSize , map.playerStartPos[1]*map.tileSize, map.tileSize - 1, map.tileSize - 1)
         self.map = map
 
+    def checkPortals(self):
+        if(self.getTile()[0] == 0):
+            self.rect = self.rect.move((self.map.width - 3) * self.map.tileSize, 0)
+            return
+        
+        if(self.getTile()[0] == self.map.width - 2):
+            self.rect = self.rect.move(-(self.map.width - 3) * self.map.tileSize, 0)
+            return
+
     def __updateImage(self):
         self.image = pygame.transform.rotate(self.frames[self.currentFrame], self.angle)
 
@@ -182,7 +191,14 @@ class Pacman(Sprite):
         self.frameCounter = 3
         return super().update(*args, **kwargs)
 
-    
+    def reset(self):
+        self.currentAnimation = 0
+        self.currentFrame = 0
+        self.frameCounter = 3
+        self.angle = 0 
+        self.__updateImage()
+        self.rect = pygame.Rect(self.map.playerStartPos[0]*self.map.tileSize , self.map.playerStartPos[1]*self.map.tileSize, self.map.tileSize - 1, self.map.tileSize - 1)
+        self.animationEnded = False
 
     def moveUp(self, step):
         #print(self.rect.topleft)
@@ -191,6 +207,7 @@ class Pacman(Sprite):
             return
         self.angle = 90
         self.__updateImage()
+        self.checkPortals()
         self.rect = self.rect.move(0, -step)
 
     def moveDown(self, step):
@@ -200,6 +217,7 @@ class Pacman(Sprite):
             return
         self.angle = 270
         self.__updateImage()
+        self.checkPortals()
         self.rect = self.rect.move(0, step)
 
     def moveLeft(self, step):
@@ -209,6 +227,7 @@ class Pacman(Sprite):
             return
         self.angle = 180
         self.__updateImage()
+        self.checkPortals()
         self.rect = self.rect.move(-step, 0)
 
     def moveRight(self, step):
@@ -218,6 +237,7 @@ class Pacman(Sprite):
             return
         self.angle = 0
         self.__updateImage()
+        self.checkPortals()
         self.rect = self.rect.move(step, 0)
 
     def getTile(self) -> Tuple[int, int]:
@@ -232,7 +252,20 @@ class Game:
         self.background = self.map.generateImage()
         self.pacman = pacman
         self.renderGroup = Group(self.pacman)
-    
+        self.currentLevel = 0
+        self.score = 0
+
+    def reset(self):
+        self.pacman.reset()
+
+    def startLevel(self):
+            self.map.updateDots()
+            self.reset()
+
+    def nextLevel(self):
+            self.currentLevel += 1
+            self.startLevel()
+                
     def update(self):
         self.screen.fill("black")
         self.screen.blit(self.background, (0, 0))
@@ -251,6 +284,13 @@ class Game:
         self.map.powerPills.draw(self.screen)
         self.renderGroup.draw(self.screen)
         self.pacman.update()
+
+        self.score += len(spritecollide(self.pacman, gameMap.dots, True))
+        pillsColide = len(spritecollide(self.pacman, gameMap.powerPills, True))
+        if(pillsColide > 0):
+            self.score += pillsColide*10
+        if(len(self.map.dots.sprites()) == 0 and len(self.map.powerPills.sprites()) == 0):
+                self.nextLevel()
 
 # pygame setup
 pygame.init()
