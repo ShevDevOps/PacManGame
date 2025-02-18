@@ -191,7 +191,14 @@ class Pacman(Sprite):
         self.frameCounter = 3
         return super().update(*args, **kwargs)
 
-    
+    def reset(self):
+        self.currentAnimation = 0
+        self.currentFrame = 0
+        self.frameCounter = 3
+        self.angle = 0 
+        self.__updateImage()
+        self.rect = pygame.Rect(self.map.playerStartPos[0]*self.map.tileSize , self.map.playerStartPos[1]*self.map.tileSize, self.map.tileSize - 1, self.map.tileSize - 1)
+        self.animationEnded = False
 
     def moveUp(self, step):
         #print(self.rect.topleft)
@@ -248,6 +255,17 @@ class Game:
         self.currentLevel = 0
         self.score = 0
 
+    def reset(self):
+        self.pacman.reset()
+
+    def startLevel(self):
+            self.map.updateDots()
+            self.reset()
+
+    def nextLevel(self):
+            self.currentLevel += 1
+            self.startLevel()
+                
     def update(self):
         self.screen.fill("black")
         self.screen.blit(self.background, (0, 0))
@@ -271,6 +289,8 @@ class Game:
         pillsColide = len(spritecollide(self.pacman, gameMap.powerPills, True))
         if(pillsColide > 0):
             self.score += pillsColide*10
+        if(len(self.map.dots.sprites()) == 0 and len(self.map.powerPills.sprites()) == 0):
+                self.nextLevel()
 
 # pygame setup
 pygame.init()
