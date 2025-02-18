@@ -165,6 +165,15 @@ class Pacman(Sprite):
         self.rect = pygame.Rect(map.playerStartPos[0]*map.tileSize , map.playerStartPos[1]*map.tileSize, map.tileSize - 1, map.tileSize - 1)
         self.map = map
 
+    def checkPortals(self):
+        if(self.getTile()[0] == 0):
+            self.rect = self.rect.move((self.map.width - 3) * self.map.tileSize, 0)
+            return
+        
+        if(self.getTile()[0] == self.map.width - 2):
+            self.rect = self.rect.move(-(self.map.width - 3) * self.map.tileSize, 0)
+            return
+
     def __updateImage(self):
         self.image = pygame.transform.rotate(self.frames[self.currentFrame], self.angle)
 
@@ -191,6 +200,7 @@ class Pacman(Sprite):
             return
         self.angle = 90
         self.__updateImage()
+        self.checkPortals()
         self.rect = self.rect.move(0, -step)
 
     def moveDown(self, step):
@@ -200,6 +210,7 @@ class Pacman(Sprite):
             return
         self.angle = 270
         self.__updateImage()
+        self.checkPortals()
         self.rect = self.rect.move(0, step)
 
     def moveLeft(self, step):
@@ -209,6 +220,7 @@ class Pacman(Sprite):
             return
         self.angle = 180
         self.__updateImage()
+        self.checkPortals()
         self.rect = self.rect.move(-step, 0)
 
     def moveRight(self, step):
@@ -218,6 +230,7 @@ class Pacman(Sprite):
             return
         self.angle = 0
         self.__updateImage()
+        self.checkPortals()
         self.rect = self.rect.move(step, 0)
 
     def getTile(self) -> Tuple[int, int]:
