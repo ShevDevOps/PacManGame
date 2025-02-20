@@ -256,7 +256,7 @@ class Pacman(Sprite):
         self.rect = self.rect.move(step, 0)
 
     def getTile(self) -> Tuple[int, int]:
-        return (self.rect.topleft[0] // self.map.tileSize, self.rect.topleft[0] // self.map.tileSize)
+        return (self.rect.topleft[0] // self.map.tileSize, self.rect.topleft[1] // self.map.tileSize)
 
 
 class Game:
