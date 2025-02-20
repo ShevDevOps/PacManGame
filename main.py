@@ -1,6 +1,6 @@
 import pygame
 from pygame.sprite import * 
-from typing import Tuple, List
+from typing import Tuple, List, Callable, Dict
 
 class Tile:
     def __init__(self, s: str):
@@ -16,6 +16,7 @@ class Tile:
             self.hasDot = True
         elif(s == 'P'):
             self.hasPill = True
+            
         
 class AlighnedSprite(Sprite):
     def __init__(self, map : "Map", image : pygame.Surface, x : int, y : int, *groups):
@@ -25,14 +26,28 @@ class AlighnedSprite(Sprite):
 
 class Map:
     def __init__(self, tileSize: int, data: str):
-        self.data = [[Tile(c) for c in row] for row in data.split('\n')]
+        lst = data.split('\n')
+        it = iter(lst)
+        the_len = len(next(it))
+        if not all(len(l) == the_len for l in it):
+            self.data = [[]]
+        else:
+            self.data = [[Tile(c) for c in s] for s in lst]
         self.height = len(self.data)
         self.width = len(self.data[0])
         self.tileSize = tileSize
+        self.ghostReturnGoal = (0,0)
+        self.ghostAfterReturnGoal = (0,0)
         self.dots : Group = Group()
         self.powerPills : Group = Group()
-        self.playerStartPos = next(((x, y) for y, row in enumerate(data.split('\n')) for x, c in enumerate(row) if c == 'C'), (0, 0))
-    
+        for y in range(self.height):
+            for x in range(self.width):
+                if(lst[y][x] == 'C'):
+                    self.playerStartPos = (x,y)
+                if(lst[y][x] == 'G'):
+                    self.ghostReturnGoal = (x,y)
+                if(lst[y][x] == 'g'):
+                    self.ghostAfterReturnGoal = (x,y)
     def isWall(self, x: int, y: int) -> bool:
         return not (0 <= x < self.width and 0 <= y < self.height) or self.data[y][x].isWall
     
@@ -245,13 +260,15 @@ class Pacman(Sprite):
 
 
 class Game:
-    def __init__(self, screen : pygame.Surface ,map : Map, pacman : Pacman):
+    def __init__(self, screen : pygame.Surface ,map : Map, pacman : Pacman, ghosts : Dict[ str,"Ghost"]):
         self.screen = screen
         self.map = map
         self.map.updateDots()
         self.background = self.map.generateImage()
         self.pacman = pacman
-        self.renderGroup = Group(self.pacman)
+        self.ghosts = ghosts 
+        self.ghostsGroup = Group(*ghosts.values())
+        self.renderGroup = Group(*ghosts.values(), self.pacman)
         self.currentLevel = 0
         self.score = 0
 
@@ -284,13 +301,72 @@ class Game:
         self.map.powerPills.draw(self.screen)
         self.renderGroup.draw(self.screen)
         self.pacman.update()
-
+        self.ghostsGroup.update(game=gameObj)
         self.score += len(spritecollide(self.pacman, gameMap.dots, True))
         pillsColide = len(spritecollide(self.pacman, gameMap.powerPills, True))
         if(pillsColide > 0):
             self.score += pillsColide*10
         if(len(self.map.dots.sprites()) == 0 and len(self.map.powerPills.sprites()) == 0):
                 self.nextLevel()
+
+
+def calcDistanceSqr(a : Tuple[int, int], b : Tuple[int, int]) -> int:
+        return pow(a[0] - b[0], 2) + pow(a[1] - b[1], 2)
+        
+        
+class Ghost(Sprite):
+    def __init__(self, map : Map,
+    image : pygame.Surface,
+    speed : int,
+    targetFuction : Callable[[Game], Tuple[int, int]],
+    startX : int,
+    startY : int, 
+    *groups):
+        super().__init__(*groups)
+        self.map = map
+        self.speed = speed
+        self.targetFuction = targetFuction
+        self.image =  pygame.transform.scale(image, (map.tileSize, map.tileSize))
+        self.rect = pygame.Rect(startX * map.tileSize, startY * map.tileSize, map.tileSize, map.tileSize)
+        self.curX = startX
+        self.curY = startY
+        self.dX = 0
+        self.dY = 0 
+        
+        
+    def update(self, *args, **kwargs):
+        if(not(self.rect.topleft[0] % self.map.tileSize == 0 and
+           self.rect.topleft[1] % self.map.tileSize == 0)):
+            self.rect = self.rect.move(self.dX, self.dY)
+            return
+            
+        newX : int = int(self.rect.topleft[0] / self.map.tileSize)
+        newY : int = int(self.rect.topleft[1] / self.map.tileSize)
+
+        game : Game = kwargs["game"]
+        targetCoords = self.targetFuction(game)
+        
+        topDistance = calcDistanceSqr((newX, newY - 1), targetCoords)
+        leftDistance = calcDistanceSqr((newX - 1, newY), targetCoords)
+        bottomDistance = calcDistanceSqr((newX, newY + 1), targetCoords)
+        rightDistance = calcDistanceSqr((newX + 1, newY), targetCoords)
+        
+        directions = [(topDistance, newX, newY - 1, 0, -self.speed), 
+                     (leftDistance, newX - 1, newY, -self.speed, 0),
+                     (bottomDistance, newX, newY + 1, 0, self.speed),
+                     (rightDistance, newX + 1, newY, self.speed, 0)]
+        validDirections = [d for d in directions if(not (d[1] == self.curX and d[2] == self.curY) and not self.map.isWall(d[1], d[2]))]
+        finalDirection = min(validDirections, key=lambda item:item[0])
+        
+        self.dX = finalDirection[3]
+        self.dY = finalDirection[4]
+        self.curX = newX
+        self.curY = newY
+        self.rect = self.rect.move(self.dX, self.dY)
+        return super().update(*args, **kwargs)
+
+
+
 
 # pygame setup
 pygame.init()
@@ -304,7 +380,17 @@ with open("map/mapData.txt", 'r') as file:
 
 gameMap = Map(16, mapData)
 player = Pacman(gameMap)
-gameObj = Game(screen, gameMap, player)
+
+blinky = Ghost(gameMap, 
+                pygame.image.load(f"blinky/frame_{2}_{0}.png"),
+                2,
+               lambda g : g.pacman.getTile(),
+               gameMap.ghostAfterReturnGoal[0],
+               gameMap.ghostAfterReturnGoal[1],
+               )
+
+
+gameObj = Game(screen, gameMap, player, {"blinky" : blinky})
 
 while running:
     # poll for events
