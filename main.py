@@ -478,32 +478,46 @@ blinky = Ghost(gameMap,
                 2,
                lambda g : g.pacman.getTile(),
                gameMap.ghostAfterReturnGoal[0],
-               gameMap.ghostAfterReturnGoal[1],)
                gameMap.ghostAfterReturnGoal[1],
                -1,
                -1
                )
 
 pinky = Ghost(gameMap, 
-                pygame.image.load(f"pinky/frame_{2}_{0}.png"),
+                [[pygame.image.load(f"pinky/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)],
+                10,
+                [30, 30],
                 2,
                lambda g : g.pacman.getTile(),
-               gameMap.ghostAfterReturnGoal[0],
-               gameMap.ghostAfterReturnGoal[1]+1,)
+               gameMap.ghostAfterReturnGoal[0] - 1,
+               gameMap.ghostAfterReturnGoal[1],
+               gameMap.width,
+               -1,
+               )
 
-inky = Ghost(gameMap,
-                pygame.image.load(f"inky/frame_{2}_{0}.png"),
+inky = Ghost(gameMap, 
+                [[pygame.image.load(f"inky/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)],
+                10,
+                [30, 30],
                 2,
                lambda g : g.pacman.getTile(),
-               gameMap.ghostAfterReturnGoal[0]+1,
-               gameMap.ghostAfterReturnGoal[1],)
+               gameMap.ghostAfterReturnGoal[0] + 1,
+               gameMap.ghostAfterReturnGoal[1],
+               gameMap.width,
+               gameMap.height,
+               )
 
-clyde = Ghost(gameMap,
-                pygame.image.load(f"clyde/frame_{2}_{0}.png"),
+clyde = Ghost(gameMap, 
+                [[pygame.image.load(f"clyde/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)],
+                10,
+                [30, 30],
                 2,
                lambda g : g.pacman.getTile(),
-               gameMap.ghostAfterReturnGoal[0]+2,
-               gameMap.ghostAfterReturnGoal[1],)
+               gameMap.ghostAfterReturnGoal[0] - 2,
+               gameMap.ghostAfterReturnGoal[1],
+               -1,
+               gameMap.height,
+               )
 
 gameObj = Game(screen, gameMap, player, {"blinky" : blinky, "pinky" : pinky, "inky" : inky, "clyde" : clyde})
 
