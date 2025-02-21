@@ -275,7 +275,7 @@ class Game:
     def reset(self):
         self.pacman.reset()
         for ghost in self.ghosts.values():
-            ghost.reset(self.map)
+            ghost.reset()
     
     def startLevel(self):
             self.map.updateDots()
@@ -330,15 +330,17 @@ class Ghost(Sprite):
         self.targetFuction = targetFuction
         self.image =  pygame.transform.scale(image, (map.tileSize, map.tileSize))
         self.rect = pygame.Rect(startX * map.tileSize, startY * map.tileSize, map.tileSize, map.tileSize)
+        self.startX = startX
+        self.startY = startY
         self.curX = startX
         self.curY = startY
         self.dX = 0
         self.dY = 0 
     
-    def reset(self, restartMap: Map):
-        self.rect = pygame.Rect(restartMap.ghostAfterReturnGoal[0] * restartMap.tileSize, restartMap.ghostAfterReturnGoal[1] * restartMap.tileSize, restartMap.tileSize, restartMap.tileSize)
-        self.curX = restartMap.ghostAfterReturnGoal[0]
-        self.curY = restartMap.ghostAfterReturnGoal[1]
+    def reset(self):
+        self.curX = self.startX
+        self.curY = self.startY
+        self.rect = pygame.Rect(self.startX * self.map.tileSize, self.startY * self.map.tileSize, self.map.tileSize, self.map.tileSize)
         
     def update(self, *args, **kwargs):
         if(not(self.rect.topleft[0] % self.map.tileSize == 0 and
