@@ -1,6 +1,7 @@
 import pygame
 from pygame.sprite import * 
 from typing import Tuple, List, Callable, Dict
+from enum import Enum
 
 class Tile:
     def __init__(self, s: str):
@@ -23,6 +24,12 @@ class AlighnedSprite(Sprite):
         super().__init__(*groups)
         self.image = image
         self.rect = (x * map.tileSize, y * map.tileSize, map.tileSize, map.tileSize)
+
+class GhostState(Enum):
+    NORMAL = 0
+    SCARED = 1
+    EATEN = 2
+    AFTER_EATEN = 3
 
 class Map:
     def __init__(self, tileSize: int, data: str):
@@ -310,6 +317,18 @@ class Game:
             self.score += pillsColide*10
         if(len(self.map.dots.sprites()) == 0 and len(self.map.powerPills.sprites()) == 0):
                 self.nextLevel()
+                
+        colidedGhosts : List[Ghost] = spritecollide(self.pacman, self.ghostsGroup, False)
+        for g in colidedGhosts:
+                if(g.state == GhostState.SCARED):
+                    #g.eat()
+                    self.score += 100
+                elif(g.state == GhostState.NORMAL): 
+                    self.nextLevel()
+                    #self.pacman.currentAnimation = 1
+                    #self.pacman.currentFrame = 0
+                    break
+        
 
 
 def calcDistanceSqr(a : Tuple[int, int], b : Tuple[int, int]) -> int:
@@ -353,6 +372,7 @@ class Ghost(Sprite):
         self.modes = modes
         self.currentMode = 0
         self.modeDuartion = self.modes[0]
+        self.state : GhostState = GhostState.NORMAL
 
     def updateImage(self):
         self.image = self.images[self.currentAnimation][self.currentFrame]
@@ -360,6 +380,7 @@ class Ghost(Sprite):
     def reset(self):
         self.curX = self.startX
         self.curY = self.startY
+        self.state : GhostState = GhostState.NORMAL
         self.rect = pygame.Rect(self.startX * self.map.tileSize, self.startY * self.map.tileSize, self.map.tileSize, self.map.tileSize)
         
     def updateAnimation(self):
@@ -378,7 +399,7 @@ class Ghost(Sprite):
             if(self.currentMode >= len(self.modes)):
                 self.currentMode = 0
             self.modeDuartion = self.modes[self.currentMode]
-
+    
     def update(self, *args, **kwargs):
 
         self.updateAnimation()
@@ -401,11 +422,17 @@ class Ghost(Sprite):
             self.rect = self.rect.move(-self.map.width * self.map.tileSize + self.dX + self.map.tileSize, 0)
             return
 
-        if(self.currentMode % 2 == 0):
-            game : Game = kwargs["game"]
-            targetCoords = self.targetFuction(game)
-        else:
-            targetCoords = (self.scatterGoalX, self.scatterGoalY)
+        targetCoords = (0,0)
+        if(self.state == GhostState.NORMAL):
+            if(self.currentMode % 2 == 0):
+                game : Game = kwargs["game"]
+                targetCoords = self.targetFuction(game)
+            else:
+                targetCoords = (self.scatterGoalX, self.scatterGoalY)
+        #elif(self.state == GhostState.EATEN):
+        #    targetCoords = (self.returnGoalX, self.returnGoalY)
+        #elif(self.state == GhostState.AFTER_EATEN):
+        #    targetCoords = (self.afterReturnX, self.afterReturnY)
         
         topDistance = calcDistanceSqr((newX, newY - 1), targetCoords)
         leftDistance = calcDistanceSqr((newX - 1, newY), targetCoords)
