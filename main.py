@@ -336,18 +336,6 @@ class Ghost(Sprite):
         self.curY = startY
         self.dX = 0
         self.dY = 0 
-    
-    def getTile(self) -> Tuple[int, int]:
-        return (self.rect.topleft[0] // self.map.tileSize, self.rect.topleft[1] // self.map.tileSize)
-    
-    def checkPortals(self):
-        if(self.getTile()[0] == 0):
-            self.rect = self.rect.move((self.map.width - 3) * self.map.tileSize, 0)
-            return
-        
-        if(self.getTile()[0] == self.map.width - 2):
-            self.rect = self.rect.move(-(self.map.width - 3) * self.map.tileSize, 0)
-            return
 
     def reset(self):
         self.curX = self.startX
@@ -362,6 +350,14 @@ class Ghost(Sprite):
             
         newX : int = int(self.rect.topleft[0] / self.map.tileSize)
         newY : int = int(self.rect.topleft[1] / self.map.tileSize)
+
+        if(newX == 0):
+            self.rect = self.rect.move(self.map.width * self.map.tileSize + self.dX - self.map.tileSize, 0)
+            return
+        
+        if(newX == self.map.width - 1):
+            self.rect = self.rect.move(-self.map.width * self.map.tileSize + self.dX + self.map.tileSize, 0)
+            return
 
         game : Game = kwargs["game"]
         targetCoords = self.targetFuction(game)
@@ -383,7 +379,6 @@ class Ghost(Sprite):
         self.curX = newX
         self.curY = newY
         self.rect = self.rect.move(self.dX, self.dY)
-        self.checkPortals()
         return super().update(*args, **kwargs)
 
 
