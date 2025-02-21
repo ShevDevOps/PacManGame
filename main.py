@@ -409,24 +409,10 @@ pinky = Ghost(gameMap,
                 2,
                lambda g : g.pacman.getTile(),
                gameMap.ghostAfterReturnGoal[0],
-               gameMap.ghostAfterReturnGoal[1],)
-
-inky = Ghost(gameMap, 
-                pygame.image.load(f"inky/frame_{2}_{0}.png"),
-                2,
-               lambda g : g.pacman.getTile(),
-               gameMap.ghostAfterReturnGoal[0],
-               gameMap.ghostAfterReturnGoal[1],)
-
-clyde = Ghost(gameMap, 
-                pygame.image.load(f"clyde/frame_{2}_{0}.png"),
-                2,
-               lambda g : g.pacman.getTile(),
-               gameMap.ghostAfterReturnGoal[0],
-               gameMap.ghostAfterReturnGoal[1],)
+               gameMap.ghostAfterReturnGoal[1]+1,)
 
 
-gameObj = Game(screen, gameMap, player, {"blinky" : blinky, "pinky" : pinky, "inky" : inky, "clyde" : clyde})
+gameObj = Game(screen, gameMap, player, {"blinky" : blinky, "pinky" : pinky})
 
 while running:
     # poll for events
