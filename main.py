@@ -319,10 +319,13 @@ def calcDistanceSqr(a : Tuple[int, int], b : Tuple[int, int]) -> int:
 class Ghost(Sprite):
     def __init__(self, map : Map,
     image : pygame.Surface,
+    modes : List[int],
     speed : int,
     targetFuction : Callable[[Game], Tuple[int, int]],
     startX : int,
-    startY : int, 
+    startY : int,
+    scatterGoalX : int, 
+    scatterGoalY : int,
     *groups):
         super().__init__(*groups)
         self.map = map
@@ -334,20 +337,35 @@ class Ghost(Sprite):
         self.startY = startY
         self.curX = startX
         self.curY = startY
+        self.scatterGoalX = scatterGoalX
+        self.scatterGoalY = scatterGoalY
         self.dX = 0
         self.dY = 0 
+        self.modes = modes
+        self.currentMode = 0
+        self.modeDuartion = self.modes[0]
 
     def reset(self):
         self.curX = self.startX
         self.curY = self.startY
         self.rect = pygame.Rect(self.startX * self.map.tileSize, self.startY * self.map.tileSize, self.map.tileSize, self.map.tileSize)
         
+    def updateMode(self):
+        self.modeDuartion -= 1
+        if(self.modeDuartion <= 0):
+            self.currentMode += 1
+            if(self.currentMode >= len(self.modes)):
+                self.currentMode = 0
+            self.modeDuartion = self.modes[self.currentMode]
+
     def update(self, *args, **kwargs):
         if(not(self.rect.topleft[0] % self.map.tileSize == 0 and
            self.rect.topleft[1] % self.map.tileSize == 0)):
             self.rect = self.rect.move(self.dX, self.dY)
             return
             
+        self.updateMode()
+
         newX : int = int(self.rect.topleft[0] / self.map.tileSize)
         newY : int = int(self.rect.topleft[1] / self.map.tileSize)
 
@@ -359,8 +377,11 @@ class Ghost(Sprite):
             self.rect = self.rect.move(-self.map.width * self.map.tileSize + self.dX + self.map.tileSize, 0)
             return
 
-        game : Game = kwargs["game"]
-        targetCoords = self.targetFuction(game)
+        if(self.currentMode % 2 == 0):
+            game : Game = kwargs["game"]
+            targetCoords = self.targetFuction(game)
+        else:
+            targetCoords = (self.scatterGoalX, self.scatterGoalY)
         
         topDistance = calcDistanceSqr((newX, newY - 1), targetCoords)
         leftDistance = calcDistanceSqr((newX - 1, newY), targetCoords)
@@ -399,10 +420,13 @@ player = Pacman(gameMap)
 
 blinky = Ghost(gameMap, 
                 pygame.image.load(f"blinky/frame_{2}_{0}.png"),
+                [30, 30],
                 2,
                lambda g : g.pacman.getTile(),
                gameMap.ghostAfterReturnGoal[0],
                gameMap.ghostAfterReturnGoal[1],
+               -1,
+               -1
                )
 
 
