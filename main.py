@@ -336,7 +336,7 @@ class Ghost(Sprite):
         self.curY = startY
         self.dX = 0
         self.dY = 0 
-    
+
     def reset(self):
         self.curX = self.startX
         self.curY = self.startY
@@ -350,6 +350,14 @@ class Ghost(Sprite):
             
         newX : int = int(self.rect.topleft[0] / self.map.tileSize)
         newY : int = int(self.rect.topleft[1] / self.map.tileSize)
+
+        if(newX == 0):
+            self.rect = self.rect.move(self.map.width * self.map.tileSize + self.dX - self.map.tileSize, 0)
+            return
+        
+        if(newX == self.map.width - 1):
+            self.rect = self.rect.move(-self.map.width * self.map.tileSize + self.dX + self.map.tileSize, 0)
+            return
 
         game : Game = kwargs["game"]
         targetCoords = self.targetFuction(game)
