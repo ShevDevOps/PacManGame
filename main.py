@@ -318,36 +318,78 @@ def calcDistanceSqr(a : Tuple[int, int], b : Tuple[int, int]) -> int:
         
 class Ghost(Sprite):
     def __init__(self, map : Map,
-    image : pygame.Surface,
+    images : List[List[pygame.Surface]],
+    frameDuration : int,
+    modes : List[int],
     speed : int,
     targetFuction : Callable[[Game], Tuple[int, int]],
     startX : int,
-    startY : int, 
+    startY : int,
+    scatterGoalX : int, 
+    scatterGoalY : int,
     *groups):
         super().__init__(*groups)
         self.map = map
         self.speed = speed
         self.targetFuction = targetFuction
-        self.image =  pygame.transform.scale(image, (map.tileSize, map.tileSize))
+        self.images = images
+        for i in range(len(images)):
+            for j in range(len(images[i])):
+                images[i][j] =  pygame.transform.scale(images[i][j], (map.tileSize, map.tileSize))
+        self.currentAnimation = 0
+        self.currentFrame = 0
+        self.updateImage()
+        self.frameDuration = frameDuration
+        self.currentFrameDuration = frameDuration
         self.rect = pygame.Rect(startX * map.tileSize, startY * map.tileSize, map.tileSize, map.tileSize)
         self.startX = startX
         self.startY = startY
         self.curX = startX
         self.curY = startY
+        self.scatterGoalX = scatterGoalX
+        self.scatterGoalY = scatterGoalY
         self.dX = 0
         self.dY = 0 
+        self.modes = modes
+        self.currentMode = 0
+        self.modeDuartion = self.modes[0]
+
+    def updateImage(self):
+        self.image = self.images[self.currentAnimation][self.currentFrame]
 
     def reset(self):
         self.curX = self.startX
         self.curY = self.startY
         self.rect = pygame.Rect(self.startX * self.map.tileSize, self.startY * self.map.tileSize, self.map.tileSize, self.map.tileSize)
         
+    def updateAnimation(self):
+        self.currentFrameDuration -= 1
+        if(self.currentFrameDuration == 0):
+            self.currentFrameDuration = self.frameDuration
+            self.currentFrame += 1
+            if(self.currentFrame >= len(self.images[self.currentAnimation])):
+                self.currentFrame = 0
+            self.updateImage()
+
+    def updateMode(self):
+        self.modeDuartion -= 1
+        if(self.modeDuartion <= 0):
+            self.currentMode += 1
+            if(self.currentMode >= len(self.modes)):
+                self.currentMode = 0
+            self.modeDuartion = self.modes[self.currentMode]
+
     def update(self, *args, **kwargs):
+
+        self.updateAnimation()
+
         if(not(self.rect.topleft[0] % self.map.tileSize == 0 and
            self.rect.topleft[1] % self.map.tileSize == 0)):
             self.rect = self.rect.move(self.dX, self.dY)
             return
             
+        self.updateMode()
+
         newX : int = int(self.rect.topleft[0] / self.map.tileSize)
         newY : int = int(self.rect.topleft[1] / self.map.tileSize)
 
@@ -359,18 +401,21 @@ class Ghost(Sprite):
             self.rect = self.rect.move(-self.map.width * self.map.tileSize + self.dX + self.map.tileSize, 0)
             return
 
-        game : Game = kwargs["game"]
-        targetCoords = self.targetFuction(game)
+        if(self.currentMode % 2 == 0):
+            game : Game = kwargs["game"]
+            targetCoords = self.targetFuction(game)
+        else:
+            targetCoords = (self.scatterGoalX, self.scatterGoalY)
         
         topDistance = calcDistanceSqr((newX, newY - 1), targetCoords)
         leftDistance = calcDistanceSqr((newX - 1, newY), targetCoords)
         bottomDistance = calcDistanceSqr((newX, newY + 1), targetCoords)
         rightDistance = calcDistanceSqr((newX + 1, newY), targetCoords)
         
-        directions = [(topDistance, newX, newY - 1, 0, -self.speed), 
-                     (leftDistance, newX - 1, newY, -self.speed, 0),
-                     (bottomDistance, newX, newY + 1, 0, self.speed),
-                     (rightDistance, newX + 1, newY, self.speed, 0)]
+        directions = [(topDistance, newX, newY - 1, 0, -self.speed, 3), 
+                      (leftDistance, newX - 1, newY, -self.speed, 0, 0),
+                      (bottomDistance, newX, newY + 1, 0, self.speed, 2),
+                      (rightDistance, newX + 1, newY, self.speed, 0, 1)]
         validDirections = [d for d in directions if(not (d[1] == self.curX and d[2] == self.curY) and not self.map.isWall(d[1], d[2]))]
         finalDirection = min(validDirections, key=lambda item:item[0])
         
@@ -378,6 +423,8 @@ class Ghost(Sprite):
         self.dY = finalDirection[4]
         self.curX = newX
         self.curY = newY
+        self.currentAnimation = finalDirection[5]
+        self.updateImage()
         self.rect = self.rect.move(self.dX, self.dY)
         return super().update(*args, **kwargs)
 
@@ -398,11 +445,15 @@ gameMap = Map(16, mapData)
 player = Pacman(gameMap)
 
 blinky = Ghost(gameMap, 
-                pygame.image.load(f"blinky/frame_{2}_{0}.png"),
+                [[pygame.image.load(f"blinky/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)],
+                10,
+                [30, 30],
                 2,
                lambda g : g.pacman.getTile(),
                gameMap.ghostAfterReturnGoal[0],
                gameMap.ghostAfterReturnGoal[1],
+               -1,
+               -1
                )
 
 
