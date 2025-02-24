@@ -1,4 +1,5 @@
 import pygame
+import random
 from pygame.sprite import * 
 from typing import Tuple, List, Callable, Dict
 from enum import Enum
@@ -315,16 +316,19 @@ class Game:
         pillsColide = len(spritecollide(self.pacman, gameMap.powerPills, True))
         if(pillsColide > 0):
             self.score += pillsColide*10
+            for g in self.ghosts.values():
+                g.scare()
+                    
         if(len(self.map.dots.sprites()) == 0 and len(self.map.powerPills.sprites()) == 0):
                 self.nextLevel()
                 
         colidedGhosts : List[Ghost] = spritecollide(self.pacman, self.ghostsGroup, False)
         for g in colidedGhosts:
                 if(g.state == GhostState.SCARED):
-                    #g.eat()
+                    g.eat()
                     self.score += 100
                 elif(g.state == GhostState.NORMAL): 
-                    self.nextLevel()
+                    self.reset()
                     #self.pacman.currentAnimation = 1
                     #self.pacman.currentFrame = 0
                     break
@@ -341,11 +345,14 @@ class Ghost(Sprite):
     frameDuration : int,
     modes : List[int],
     speed : int,
+    scaredTime : int,
     targetFuction : Callable[[Game], Tuple[int, int]],
     startX : int,
     startY : int,
     scatterGoalX : int, 
     scatterGoalY : int,
+    returnGoalX : int, 
+    returnGoalY : int,
     *groups):
         super().__init__(*groups)
         self.map = map
@@ -371,8 +378,12 @@ class Ghost(Sprite):
         self.dY = 0 
         self.modes = modes
         self.currentMode = 0
+        self.returnGoalX = returnGoalX
+        self.returnGoalY = returnGoalY
         self.modeDuartion = self.modes[0]
         self.state : GhostState = GhostState.NORMAL
+        self.scaredTime = scaredTime
+        self.scaredTimer = 0
 
     def updateImage(self):
         self.image = self.images[self.currentAnimation][self.currentFrame]
@@ -381,6 +392,14 @@ class Ghost(Sprite):
         self.curX = self.startX
         self.curY = self.startY
         self.state : GhostState = GhostState.NORMAL
+        self.currentMode = 0
+        self.modeDuartion = self.modes[0]
+        self.currentAnimation = 0
+        self.currentFrame = 0
+        self.updateImage()
+        self.currentFrameDuration = self.frameDuration
+        self.state : GhostState = GhostState.NORMAL
+        self.scaredTimer = 0
         self.rect = pygame.Rect(self.startX * self.map.tileSize, self.startY * self.map.tileSize, self.map.tileSize, self.map.tileSize)
         
     def updateAnimation(self):
@@ -399,6 +418,18 @@ class Ghost(Sprite):
             if(self.currentMode >= len(self.modes)):
                 self.currentMode = 0
             self.modeDuartion = self.modes[self.currentMode]
+
+    def scare(self):
+        if(self.state == GhostState.NORMAL):
+            self.state = GhostState.SCARED
+            self.currentAnimation = 4
+            self.scaredTimer = self.scaredTime
+            
+    def eat(self):
+        if(self.state == GhostState.SCARED):
+            self.state = GhostState.EATEN
+            self.currentAnimation = 5
+            self.currentFrame = 0
     
     def update(self, *args, **kwargs):
 
@@ -422,6 +453,16 @@ class Ghost(Sprite):
             self.rect = self.rect.move(-self.map.width * self.map.tileSize + self.dX + self.map.tileSize, 0)
             return
 
+        if(self.state == GhostState.EATEN and
+        newX == self.returnGoalX and
+        newY == self.returnGoalY):
+            self.state = GhostState.NORMAL
+            
+        if(self.state == GhostState.SCARED):
+            self.scaredTimer -= 1
+            if(self.scaredTimer == 0):
+                self.state = GhostState.NORMAL
+
         targetCoords = (0,0)
         if(self.state == GhostState.NORMAL):
             if(self.currentMode % 2 == 0):
@@ -429,10 +470,8 @@ class Ghost(Sprite):
                 targetCoords = self.targetFuction(game)
             else:
                 targetCoords = (self.scatterGoalX, self.scatterGoalY)
-        #elif(self.state == GhostState.EATEN):
-        #    targetCoords = (self.returnGoalX, self.returnGoalY)
-        #elif(self.state == GhostState.AFTER_EATEN):
-        #    targetCoords = (self.afterReturnX, self.afterReturnY)
+        elif(self.state == GhostState.EATEN):
+            targetCoords = (self.returnGoalX, self.returnGoalY)
         
         topDistance = calcDistanceSqr((newX, newY - 1), targetCoords)
         leftDistance = calcDistanceSqr((newX - 1, newY), targetCoords)
@@ -444,14 +483,19 @@ class Ghost(Sprite):
                       (bottomDistance, newX, newY + 1, 0, self.speed, 2),
                       (rightDistance, newX + 1, newY, self.speed, 0, 1)]
         validDirections = [d for d in directions if(not (d[1] == self.curX and d[2] == self.curY) and not self.map.isWall(d[1], d[2]))]
-        finalDirection = min(validDirections, key=lambda item:item[0])
+        
+        if(self.state != GhostState.SCARED):
+            finalDirection = min(validDirections, key=lambda item:item[0])
+        else:
+            finalDirection = random.choice(validDirections)
         
         self.dX = finalDirection[3]
         self.dY = finalDirection[4]
         self.curX = newX
         self.curY = newY
-        self.currentAnimation = finalDirection[5]
-        self.updateImage()
+        if(self.state == GhostState.NORMAL):
+            self.currentAnimation = finalDirection[5]
+            self.updateImage()
         self.rect = self.rect.move(self.dX, self.dY)
         return super().update(*args, **kwargs)
 
@@ -472,51 +516,73 @@ gameMap = Map(16, mapData)
 player = Pacman(gameMap)
 
 blinky = Ghost(gameMap, 
-                [[pygame.image.load(f"blinky/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)],
+                [[pygame.image.load(f"blinky/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)] + 
+                [[pygame.image.load(f"scared/scared_{i}.png").convert() for i in range(2)]] +
+                [[pygame.image.load(f"eaten/eaten.png").convert()]],
                 10,
                 [30, 30],
                 2,
+                30,
                lambda g : g.pacman.getTile(),
                gameMap.ghostAfterReturnGoal[0],
                gameMap.ghostAfterReturnGoal[1],
                -1,
-               -1
+               -1,
+               gameMap.ghostAfterReturnGoal[0],
+               gameMap.ghostAfterReturnGoal[1]
                )
 
 pinky = Ghost(gameMap, 
-                [[pygame.image.load(f"pinky/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)],
+                [[pygame.image.load(f"pinky/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)] + 
+                [[pygame.image.load(f"scared/scared_{i}.png").convert() for i in range(2)]] +
+                [[pygame.image.load(f"eaten/eaten.png").convert()]],
                 10,
                 [30, 30],
                 2,
-               lambda g : g.pacman.getTile(),
+                30,
+               lambda g : (g.pacman.getTile()[0] + (4 if g.pacman.angle == 0 else (-4 if g.pacman.angle == 180 else 0)),
+                           g.pacman.getTile()[1] + (4 if g.pacman.angle == 270 else (-4 if g.pacman.angle == 90 else 0))),
                gameMap.ghostAfterReturnGoal[0] - 1,
                gameMap.ghostAfterReturnGoal[1],
                gameMap.width,
                -1,
+               gameMap.ghostAfterReturnGoal[0],
+               gameMap.ghostAfterReturnGoal[1]
                )
 
 inky = Ghost(gameMap, 
-                [[pygame.image.load(f"inky/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)],
+                [[pygame.image.load(f"inky/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)] + 
+                [[pygame.image.load(f"scared/scared_{i}.png").convert() for i in range(2)]] +
+                [[pygame.image.load(f"eaten/eaten.png").convert()]],
                 10,
                 [30, 30],
                 2,
-               lambda g : g.pacman.getTile(),
+                30,
+               lambda g : (g.pacman.getTile()[0] + (g.pacman.getTile()[0] - g.ghosts["blinky"].curX),
+                           g.pacman.getTile()[1] + (g.pacman.getTile()[1] - g.ghosts["blinky"].curY)),
                gameMap.ghostAfterReturnGoal[0] + 1,
                gameMap.ghostAfterReturnGoal[1],
                gameMap.width,
                gameMap.height,
+               gameMap.ghostAfterReturnGoal[0],
+               gameMap.ghostAfterReturnGoal[1]
                )
 
 clyde = Ghost(gameMap, 
-                [[pygame.image.load(f"clyde/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)],
+                [[pygame.image.load(f"clyde/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)] + 
+                [[pygame.image.load(f"scared/scared_{i}.png").convert() for i in range(2)]] +
+                [[pygame.image.load(f"eaten/eaten.png").convert()]],
                 10,
                 [30, 30],
                 2,
-               lambda g : g.pacman.getTile(),
+                30,
+               lambda g : (-1, gameMap.height) if calcDistanceSqr(g.pacman.getTile(), (g.ghosts["clyde"].curX,g.ghosts["clyde"].curY)) < 64 else g.pacman.getTile(),
                gameMap.ghostAfterReturnGoal[0] - 2,
                gameMap.ghostAfterReturnGoal[1],
                -1,
                gameMap.height,
+               gameMap.ghostAfterReturnGoal[0],
+               gameMap.ghostAfterReturnGoal[1]
                )
 
 gameObj = Game(screen, gameMap, player, {"blinky" : blinky, "pinky" : pinky, "inky" : inky, "clyde" : clyde})
