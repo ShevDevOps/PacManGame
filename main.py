@@ -9,6 +9,7 @@ class Tile:
         self.isWall = False
         self.hasDot = False
         self.hasPill = False
+        self.isRetPass = True
         if(s == '#'):
             self.isWall = True
             self.isRetPass = False
@@ -56,8 +57,10 @@ class Map:
                     self.ghostReturnGoal = (x,y)
                 if(lst[y][x] == 'g'):
                     self.ghostAfterReturnGoal = (x,y)
-    def isWall(self, x: int, y: int) -> bool:
-        return not (0 <= x < self.width and 0 <= y < self.height) or self.data[y][x].isWall
+    def isWall(self, x : int, y :int, state : GhostState = GhostState.NORMAL) ->bool:
+        if(x < 0 or y < 0 or x >= self.width or y >= self.height or ( self.data[y][x].isWall if (state == GhostState.NORMAL or state == GhostState.SCARED) else not self.data[y][x].isRetPass)):
+            return True
+        return False
     
     def blitTile(self, surface : pygame.Surface, tile : pygame.Surface, x : int, y : int, angle : float = 0):
         surface.blit(pygame.transform.rotate(tile, angle), (x * self.tileSize + self.tileSize/2, y * self.tileSize + self.tileSize/2))
@@ -354,6 +357,8 @@ class Ghost(Sprite):
     scatterGoalY : int,
     returnGoalX : int, 
     returnGoalY : int,
+    afterReturnX : int,
+    afterReturnY : int, 
     *groups):
         super().__init__(*groups)
         self.map = map
@@ -383,6 +388,8 @@ class Ghost(Sprite):
         self.currentMode = 0
         self.returnGoalX = returnGoalX
         self.returnGoalY = returnGoalY
+        self.afterReturnX = afterReturnX
+        self.afterReturnY = afterReturnY
         self.modeDuartion = self.modes[0]
         self.state : GhostState = GhostState.NORMAL
         self.scaredTime = scaredTime
@@ -460,8 +467,13 @@ class Ghost(Sprite):
         if(self.state == GhostState.EATEN and
         newX == self.returnGoalX and
         newY == self.returnGoalY):
-            self.state = GhostState.NORMAL
+            self.state = GhostState.AFTER_EATEN
             self.currentSpeed = self.speed
+            
+        if(self.state == GhostState.AFTER_EATEN and
+        newX == self.afterReturnX and
+        newY == self.afterReturnY):
+            self.state = GhostState.NORMAL
             
         if(self.state == GhostState.SCARED):
             self.scaredTimer -= 1
@@ -477,6 +489,8 @@ class Ghost(Sprite):
                 targetCoords = (self.scatterGoalX, self.scatterGoalY)
         elif(self.state == GhostState.EATEN):
             targetCoords = (self.returnGoalX, self.returnGoalY)
+        elif(self.state == GhostState.AFTER_EATEN):
+            targetCoords = (self.afterReturnX, self.afterReturnY)
         
         topDistance = calcDistanceSqr((newX, newY - 1), targetCoords)
         leftDistance = calcDistanceSqr((newX - 1, newY), targetCoords)
@@ -487,7 +501,7 @@ class Ghost(Sprite):
                       (leftDistance, newX - 1, newY, -self.currentSpeed, 0, 0),
                       (bottomDistance, newX, newY + 1, 0, self.currentSpeed, 2),
                       (rightDistance, newX + 1, newY, self.currentSpeed, 0, 1)]
-        validDirections = [d for d in directions if(not (d[1] == self.curX and d[2] == self.curY) and not self.map.isWall(d[1], d[2]))]
+        validDirections = [d for d in directions if(not (d[1] == self.curX and d[2] == self.curY) and not self.map.isWall(d[1], d[2], self.state))]
         
         if(self.state != GhostState.SCARED):
             finalDirection = min(validDirections, key=lambda item:item[0])
@@ -534,6 +548,8 @@ blinky = Ghost(gameMap,
                gameMap.ghostAfterReturnGoal[1],
                -1,
                -1,
+               gameMap.ghostReturnGoal[0],
+               gameMap.ghostReturnGoal[1],
                gameMap.ghostAfterReturnGoal[0],
                gameMap.ghostAfterReturnGoal[1]
                )
@@ -553,6 +569,8 @@ pinky = Ghost(gameMap,
                gameMap.ghostAfterReturnGoal[1],
                gameMap.width,
                -1,
+               gameMap.ghostReturnGoal[0],
+               gameMap.ghostReturnGoal[1],
                gameMap.ghostAfterReturnGoal[0],
                gameMap.ghostAfterReturnGoal[1]
                )
@@ -572,6 +590,8 @@ inky = Ghost(gameMap,
                gameMap.ghostAfterReturnGoal[1],
                gameMap.width,
                gameMap.height,
+               gameMap.ghostReturnGoal[0],
+               gameMap.ghostReturnGoal[1],
                gameMap.ghostAfterReturnGoal[0],
                gameMap.ghostAfterReturnGoal[1]
                )
@@ -590,6 +610,8 @@ clyde = Ghost(gameMap,
                gameMap.ghostAfterReturnGoal[1],
                -1,
                gameMap.height,
+               gameMap.ghostReturnGoal[0],
+               gameMap.ghostReturnGoal[1],
                gameMap.ghostAfterReturnGoal[0],
                gameMap.ghostAfterReturnGoal[1]
                )
