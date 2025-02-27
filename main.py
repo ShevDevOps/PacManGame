@@ -1,4 +1,7 @@
 import pygame
+import pygame_menu
+from pygame_menu import themes
+from pygame_menu.widgets import Label, TextInput
 import random
 from pygame.sprite import * 
 from typing import Tuple, List, Callable, Dict
@@ -181,15 +184,21 @@ class Map:
                     AlighnedSprite(self, pillImage, x, y, self.powerPills)
 
 class Pacman(Sprite):
-    def __init__(self, map : Map, *groups):
+    def __init__(self, map : Map, frames : List[List[pygame.Surface]], frameDuration : int, *groups):
         super().__init__(*groups)
-        self.frames = [pygame.transform.scale(pygame.image.load(f"frames/frame_{i}.png").convert(), (map.tileSize,map.tileSize)) for i in range(5)]
+        self.frames = frames
+        self.currentAnimation = 0
         self.currentFrame = 0
-        self.frameCounter = 3
-        self.image = self.frames[0]
+        self.frameDuration = frameDuration
+        self.frameCounter = frameDuration
+        for i in range(len(frames)):
+            for j in range(len(frames[i])):
+                frames[i][j] =  pygame.transform.scale(frames[i][j], (map.tileSize, map.tileSize))
         self.angle = 0 
+        self.__updateImage()
         self.rect = pygame.Rect(map.playerStartPos[0]*map.tileSize , map.playerStartPos[1]*map.tileSize, map.tileSize - 1, map.tileSize - 1)
         self.map = map
+        self.animationEnded = False
 
     def checkPortals(self):
         if(self.getTile()[0] == 0):
@@ -201,26 +210,28 @@ class Pacman(Sprite):
             return
 
     def __updateImage(self):
-        self.image = pygame.transform.rotate(self.frames[self.currentFrame], self.angle)
+        self.image = pygame.transform.rotate(self.frames[self.currentAnimation][self.currentFrame], self.angle)
 
     def update(self, *args, **kwargs):
         
         if(self.frameCounter != 0):
+            self.animationEnded = False
             self.frameCounter -= 1
             return super().update(*args, **kwargs)
         
-        if(self.currentFrame == 4):
+        if(self.currentFrame == len(self.frames[self.currentAnimation]) - 1):
             self.currentFrame = 0
+            self.animationEnded = True
         else:
             self.currentFrame += 1
         self.__updateImage()
-        self.frameCounter = 3
+        self.frameCounter = self.frameDuration
         return super().update(*args, **kwargs)
 
     def reset(self):
         self.currentAnimation = 0
         self.currentFrame = 0
-        self.frameCounter = 3
+        self.frameCounter = self.frameDuration
         self.angle = 0 
         self.__updateImage()
         self.rect = pygame.Rect(self.map.playerStartPos[0]*self.map.tileSize , self.map.playerStartPos[1]*self.map.tileSize, self.map.tileSize - 1, self.map.tileSize - 1)
@@ -269,74 +280,142 @@ class Pacman(Sprite):
     def getTile(self) -> Tuple[int, int]:
         return (self.rect.topleft[0] // self.map.tileSize, self.rect.topleft[1] // self.map.tileSize)
 
+class GameState(Enum):
+    PLAY = 0
+    DEFEAT = 1
+    OVER = 2
+    MENU = 3
 
 class Game:
-    def __init__(self, screen : pygame.Surface ,map : Map, pacman : Pacman, ghosts : Dict[ str,"Ghost"]):
+    def __init__(self, screen : pygame.Surface ,map : Map, pacman : Pacman, ghosts : Dict[ str,"Ghost"], startLives : int, levels : List[List[int]],  bonusImage : pygame.Surface):
         self.screen = screen
         self.map = map
-        self.map.updateDots()
+        self.bonusImage = pygame.transform.scale(bonusImage, (self.map.tileSize, self.map.tileSize))
         self.background = self.map.generateImage()
         self.pacman = pacman
         self.ghosts = ghosts 
         self.ghostsGroup = Group(*ghosts.values())
         self.renderGroup = Group(*ghosts.values(), self.pacman)
+        self.bonusGroup = Group()
+        self.startLives = startLives
+        self.lives = self.startLives
+        self.levels = levels
         self.currentLevel = 0
         self.score = 0
+        self.state = GameState.MENU
+
+    def startNewGame(self):
+        self.currentLevel = 0
+        self.score = 0
+        self.startLevel()
 
     def reset(self):
         self.pacman.reset()
         for ghost in self.ghosts.values():
             ghost.reset()
+        self.state = GameState.PLAY
     
     def startLevel(self):
-            self.map.updateDots()
-            self.reset()
+        self.lives = self.startLives
+        for g in self.ghosts.values():
+            g.modes = self.levels[self.currentLevel]
+        self.map.updateDots()
+        self.reset()
 
     def nextLevel(self):
-            self.currentLevel += 1
-            self.startLevel()
+        self.currentLevel += 1
+        if(self.currentLevel >= len(self.levels)):
+            self.state = GameState.OVER
+            return
+        self.startLevel()
                 
     def update(self):
+        if(self.state != GameState.PLAY and self.state != GameState.DEFEAT):
+            return
+
         self.screen.fill("black")
         self.screen.blit(self.background, (0, 0))
 
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_w]:
-            self.pacman.moveUp(4)
-        if keys[pygame.K_s]:
-            self.pacman.moveDown(4)
-        if keys[pygame.K_a]:
-            self.pacman.moveLeft(4)
-        if keys[pygame.K_d]:
-            self.pacman.moveRight(4)
+        if(self.state == GameState.PLAY):
 
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_w]:
+                self.pacman.moveUp(2)
+            if keys[pygame.K_s]:
+                self.pacman.moveDown(2)
+            if keys[pygame.K_a]:
+                self.pacman.moveLeft(2)
+            if keys[pygame.K_d]:
+                self.pacman.moveRight(2)
+
+            
+            self.pacman.update()
+            self.ghostsGroup.update(game=gameObj)
+            bonusColide = len(spritecollide(self.pacman, self.bonusGroup, True))
+            self.score += bonusColide*200
+            self.score += len(spritecollide(self.pacman, gameMap.dots, True))
+            pillsColide = len(spritecollide(self.pacman, gameMap.powerPills, True))
+            if(pillsColide > 0):
+                self.score += pillsColide*10
+                for g in self.ghosts.values():
+                    g.scare()
+                        
+            if(len(self.map.dots.sprites()) == 0 and len(self.map.powerPills.sprites()) == 0):
+                self.nextLevel()
+                    
+            colidedGhosts : List[Ghost] = spritecollide(self.pacman, self.ghostsGroup, False)
+            for g in colidedGhosts:
+                    if(g.state == GhostState.SCARED):
+                        g.eat()
+                        self.score += 100
+                    elif(g.state == GhostState.NORMAL):
+                        self.lives -= 1
+                        self.state = GameState.DEFEAT
+                        self.pacman.currentAnimation = 1
+                        self.pacman.currentFrame = 0
+                        break
+
+            if(random.randrange(1200) == 1):
+                bonusX = 0
+                bonusY = 0
+                while self.map.isWall(bonusX, bonusY):
+                    bonusX = random.randrange(self.map.width)
+                    bonusY = random.randrange(self.map.height)
+                AlighnedSprite(self.map, self.bonusImage, bonusX, bonusY, self.renderGroup, self.bonusGroup)
+
+        else:
+            self.pacman.update()
+            if(self.pacman.animationEnded):
+                if(self.lives == 0):
+                    self.state = GameState.OVER
+                else:
+                    self.reset() 
         self.map.dots.draw(self.screen)
         self.map.powerPills.draw(self.screen)
-        self.renderGroup.draw(self.screen)
-        self.pacman.update()
-        self.ghostsGroup.update(game=gameObj)
-        self.score += len(spritecollide(self.pacman, gameMap.dots, True))
-        pillsColide = len(spritecollide(self.pacman, gameMap.powerPills, True))
-        if(pillsColide > 0):
-            self.score += pillsColide*10
-            for g in self.ghosts.values():
-                g.scare()
-                    
-        if(len(self.map.dots.sprites()) == 0 and len(self.map.powerPills.sprites()) == 0):
-                self.nextLevel()
-                
-        colidedGhosts : List[Ghost] = spritecollide(self.pacman, self.ghostsGroup, False)
-        for g in colidedGhosts:
-                if(g.state == GhostState.SCARED):
-                    g.eat()
-                    self.score += 100
-                elif(g.state == GhostState.NORMAL): 
-                    self.reset()
-                    #self.pacman.currentAnimation = 1
-                    #self.pacman.currentFrame = 0
-                    break
-        
+        self.renderGroup.draw(self.screen)       
 
+
+class LeaderBoard:
+    def __init__(self, menuWidth : int, menuHeight: int):
+        self.board = []
+        self.message = ""
+        self.menu = pygame_menu.Menu("Leader Board", menuWidth, menuHeight, theme=themes.THEME_DARK)
+        self.menu.add.button("Quit", pygame_menu.events.BACK)
+
+    def add(self, name : str, score : int):
+        if(self.check(name)):
+            self.board.append((name, score))
+            self.menu.add.label(f"{name} - {score}")
+            return True
+        return False
+
+    def check(self, name : str) -> bool:
+        for record in self.board:
+            if(record[0] == name):
+                self.message = f"\"{name}\" is already taken"
+                return False
+        self.message = ""
+        return True
 
 def calcDistanceSqr(a : Tuple[int, int], b : Tuple[int, int]) -> int:
         return pow(a[0] - b[0], 2) + pow(a[1] - b[1], 2)
@@ -532,7 +611,7 @@ with open("map/mapData.txt", 'r') as file:
     mapData = file.read()
 
 gameMap = Map(16, mapData)
-player = Pacman(gameMap)
+player = Pacman(gameMap, [[ pygame.image.load(f"pacman/frame_{i}.png").convert()  for i in range(8)],[pygame.image.load(f"pacman/gameOver/frame_{i}.png").convert()  for i in range(42)]], 3)
 
 blinky = Ghost(gameMap, 
                 [[pygame.image.load(f"blinky/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)] + 
@@ -616,22 +695,75 @@ clyde = Ghost(gameMap,
                gameMap.ghostAfterReturnGoal[1]
                )
 
-gameObj = Game(screen, gameMap, player, {"blinky" : blinky, "pinky" : pinky, "inky" : inky, "clyde" : clyde})
+gameObj = Game(screen, gameMap, player, {"blinky" : blinky, "pinky" : pinky, "inky" : inky, "clyde" : clyde}, 3, [[30, 40], [30, 40]], pygame.image.load("cherry.png").convert_alpha(screen))
+
+def startGame():
+    global gameObj
+    gameObj.startNewGame()
+
+mainMenu = pygame_menu.Menu("Pac-Man", screen.get_width(), screen.get_height(), theme=themes.THEME_DARK)
+
+
+board = LeaderBoard(screen.get_width(), screen.get_height())
+gameOverMenu = pygame_menu.Menu("Game Over", screen.get_width(), screen.get_height(), theme=themes.THEME_DARK)
+
+def checkName(name : str, widget : TextInput):
+    global board
+    board.check(name)
+
+def addName(name : str, widget : TextInput):
+    global gameObj
+    global board
+    if(board.add(name, gameObj.score)):
+        gameObj.state = GameState.MENU
+        widget.set_value("")
+
+def openBoard():
+    global board
+    global mainMenu
+    mainMenu._open(board.menu)
+
+mainMenu.add.button("Play", startGame)
+mainMenu.add.button("Leader Board", openBoard)
+mainMenu.add.button("Quit", pygame_menu.events.EXIT)
+
+scoreLabel : Label  =  gameOverMenu.add.label("Your Score is 0")
+warningLabel : Label = gameOverMenu.add.label("")
+nameInput : TextInput = gameOverMenu.add.text_input("Enter Your name:  ", onchange=checkName, onreturn=addName)
+nameInput.add_self_to_kwargs()
 
 while running:
-    # poll for events
-    # pygame.QUIT event means the user clicked X to close your window
-    for event in pygame.event.get():
+
+    if(gameObj.state == GameState.MENU):
+        mainMenu.enable()
+    else:
+        mainMenu.disable()
+
+    if(gameObj.state == GameState.OVER):
+        gameOverMenu.enable()
+        warningLabel.set_title(board.message)
+    else:
+        gameOverMenu.disable()
+
+    events = pygame.event.get()
+    for event in events:
         if event.type == pygame.QUIT:
-            running = False
+            exit()
+ 
+    if(mainMenu.is_enabled()):
+        mainMenu.update(events)
+        mainMenu.draw(screen)
 
+    if(gameOverMenu.is_enabled()):
+        gameOverMenu.update(events)
+        gameOverMenu.draw(screen)
+
+    
     gameObj.update()
-    # flip() the display to put your work on screen
-    pygame.display.flip()
+    if(gameObj.state == GameState.OVER):
+        scoreLabel.set_title(f"Your Score is {gameObj.score}")    
 
-    # limits FPS to 60
-    # dt is delta time in seconds since last frame, used for framerate-
-    # independent physics.
+    pygame.display.flip()
     clock.tick(60)
 
 pygame.quit()
