@@ -280,9 +280,10 @@ class Pacman(Sprite):
 class GameState(Enum):
     PLAY = 0
     DEFEAT = 1
+    OVER = 2
 
 class Game:
-    def __init__(self, screen : pygame.Surface ,map : Map, pacman : Pacman, ghosts : Dict[ str,"Ghost"],  bonusImage : pygame.Surface):
+    def __init__(self, screen : pygame.Surface ,map : Map, pacman : Pacman, ghosts : Dict[ str,"Ghost"], startLives : int, levels : List[List[int]],  bonusImage : pygame.Surface):
         self.screen = screen
         self.map = map
         self.bonusImage = pygame.transform.scale(bonusImage, (self.map.tileSize, self.map.tileSize))
@@ -292,9 +293,17 @@ class Game:
         self.ghostsGroup = Group(*ghosts.values())
         self.renderGroup = Group(*ghosts.values(), self.pacman)
         self.bonusGroup = Group()
+        self.startLives = startLives
+        self.lives = self.startLives
+        self.levels = levels
         self.currentLevel = 0
         self.score = 0
         self.state = GameState.PLAY
+
+    def startNewGame(self):
+        self.currentLevel = 0
+        self.score = 0
+        self.startLevel()
 
     def reset(self):
         self.pacman.reset()
@@ -303,14 +312,23 @@ class Game:
         self.state = GameState.PLAY
     
     def startLevel(self):
-            self.map.updateDots()
-            self.reset()
+        self.lives = self.startLives
+        for g in self.ghosts.values():
+            g.modes = self.levels[self.currentLevel]
+        self.map.updateDots()
+        self.reset()
 
     def nextLevel(self):
-            self.currentLevel += 1
-            self.startLevel()
+        self.currentLevel += 1
+        if(self.currentLevel >= len(self.levels)):
+            self.state = GameState.OVER
+            return
+        self.startLevel()
                 
     def update(self):
+        if(self.state != GameState.PLAY and self.state != GameState.DEFEAT):
+            return
+
         self.screen.fill("black")
         self.screen.blit(self.background, (0, 0))
 
@@ -339,14 +357,15 @@ class Game:
                     g.scare()
                         
             if(len(self.map.dots.sprites()) == 0 and len(self.map.powerPills.sprites()) == 0):
-                    self.nextLevel()
+                self.nextLevel()
                     
             colidedGhosts : List[Ghost] = spritecollide(self.pacman, self.ghostsGroup, False)
             for g in colidedGhosts:
                     if(g.state == GhostState.SCARED):
                         g.eat()
                         self.score += 100
-                    elif(g.state == GhostState.NORMAL): 
+                    elif(g.state == GhostState.NORMAL):
+                        self.lives -= 1
                         self.state = GameState.DEFEAT
                         self.pacman.currentAnimation = 1
                         self.pacman.currentFrame = 0
@@ -363,7 +382,10 @@ class Game:
         else:
             self.pacman.update()
             if(self.pacman.animationEnded):
-                self.reset() 
+                if(self.lives == 0):
+                    self.state = GameState.OVER
+                else:
+                    self.reset() 
         self.map.dots.draw(self.screen)
         self.map.powerPills.draw(self.screen)
         self.renderGroup.draw(self.screen)       
@@ -647,7 +669,8 @@ clyde = Ghost(gameMap,
                gameMap.ghostAfterReturnGoal[1]
                )
 
-gameObj = Game(screen, gameMap, player, {"blinky" : blinky, "pinky" : pinky, "inky" : inky, "clyde" : clyde}, pygame.image.load("cherry.png").convert_alpha(screen))
+gameObj = Game(screen, gameMap, player, {"blinky" : blinky, "pinky" : pinky, "inky" : inky, "clyde" : clyde}, 3, [[30, 40], [30, 40]], pygame.image.load("cherry.png").convert_alpha(screen))
+gameObj.startNewGame()
 
 while running:
     # poll for events
