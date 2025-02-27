@@ -183,7 +183,7 @@ class Map:
 class Pacman(Sprite):
     def __init__(self, map : Map, *groups):
         super().__init__(*groups)
-        self.frames = [pygame.transform.scale(pygame.image.load(f"frames/frame_{i}.png").convert(), (map.tileSize,map.tileSize)) for i in range(5)]
+        self.frames = [pygame.transform.scale(pygame.image.load(f"pacman/frame_{i}.png").convert(), (map.tileSize,map.tileSize)) for i in range(8)]
         self.currentFrame = 0
         self.frameCounter = 3
         self.image = self.frames[0]
@@ -209,7 +209,7 @@ class Pacman(Sprite):
             self.frameCounter -= 1
             return super().update(*args, **kwargs)
         
-        if(self.currentFrame == 4):
+        if(self.currentFrame == 6):
             self.currentFrame = 0
         else:
             self.currentFrame += 1
