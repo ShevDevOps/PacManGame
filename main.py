@@ -181,15 +181,21 @@ class Map:
                     AlighnedSprite(self, pillImage, x, y, self.powerPills)
 
 class Pacman(Sprite):
-    def __init__(self, map : Map, *groups):
+    def __init__(self, map : Map, frames : List[List[pygame.Surface]], frameDuration : int, *groups):
         super().__init__(*groups)
-        self.frames = [pygame.transform.scale(pygame.image.load(f"pacman/frame_{i}.png").convert(), (map.tileSize,map.tileSize)) for i in range(8)]
+        self.frames = frames
+        self.currentAnimation = 0
         self.currentFrame = 0
-        self.frameCounter = 3
-        self.image = self.frames[0]
+        self.frameDuration = frameDuration
+        self.frameCounter = frameDuration
+        for i in range(len(frames)):
+            for j in range(len(frames[i])):
+                frames[i][j] =  pygame.transform.scale(frames[i][j], (map.tileSize, map.tileSize))
         self.angle = 0 
+        self.__updateImage()
         self.rect = pygame.Rect(map.playerStartPos[0]*map.tileSize , map.playerStartPos[1]*map.tileSize, map.tileSize - 1, map.tileSize - 1)
         self.map = map
+        self.animationEnded = False
 
     def checkPortals(self):
         if(self.getTile()[0] == 0):
@@ -201,26 +207,28 @@ class Pacman(Sprite):
             return
 
     def __updateImage(self):
-        self.image = pygame.transform.rotate(self.frames[self.currentFrame], self.angle)
+        self.image = pygame.transform.rotate(self.frames[self.currentAnimation][self.currentFrame], self.angle)
 
     def update(self, *args, **kwargs):
         
         if(self.frameCounter != 0):
+            self.animationEnded = False
             self.frameCounter -= 1
             return super().update(*args, **kwargs)
         
-        if(self.currentFrame == 6):
+        if(self.currentFrame == len(self.frames[self.currentAnimation]) - 1):
             self.currentFrame = 0
+            self.animationEnded = True
         else:
             self.currentFrame += 1
         self.__updateImage()
-        self.frameCounter = 3
+        self.frameCounter = self.frameDuration
         return super().update(*args, **kwargs)
 
     def reset(self):
         self.currentAnimation = 0
         self.currentFrame = 0
-        self.frameCounter = 3
+        self.frameCounter = self.frameDuration
         self.angle = 0 
         self.__updateImage()
         self.rect = pygame.Rect(self.map.playerStartPos[0]*self.map.tileSize , self.map.playerStartPos[1]*self.map.tileSize, self.map.tileSize - 1, self.map.tileSize - 1)
@@ -269,6 +277,9 @@ class Pacman(Sprite):
     def getTile(self) -> Tuple[int, int]:
         return (self.rect.topleft[0] // self.map.tileSize, self.rect.topleft[1] // self.map.tileSize)
 
+class GameState(Enum):
+    PLAY = 0
+    DEFEAT = 1
 
 class Game:
     def __init__(self, screen : pygame.Surface ,map : Map, pacman : Pacman, ghosts : Dict[ str,"Ghost"]):
@@ -282,11 +293,13 @@ class Game:
         self.renderGroup = Group(*ghosts.values(), self.pacman)
         self.currentLevel = 0
         self.score = 0
+        self.state = GameState.PLAY
 
     def reset(self):
         self.pacman.reset()
         for ghost in self.ghosts.values():
             ghost.reset()
+        self.state = GameState.PLAY
     
     def startLevel(self):
             self.map.updateDots()
@@ -300,42 +313,48 @@ class Game:
         self.screen.fill("black")
         self.screen.blit(self.background, (0, 0))
 
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_w]:
-            self.pacman.moveUp(4)
-        if keys[pygame.K_s]:
-            self.pacman.moveDown(4)
-        if keys[pygame.K_a]:
-            self.pacman.moveLeft(4)
-        if keys[pygame.K_d]:
-            self.pacman.moveRight(4)
+        if(self.state == GameState.PLAY):
 
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_w]:
+                self.pacman.moveUp(2)
+            if keys[pygame.K_s]:
+                self.pacman.moveDown(2)
+            if keys[pygame.K_a]:
+                self.pacman.moveLeft(2)
+            if keys[pygame.K_d]:
+                self.pacman.moveRight(2)
+
+            
+            self.pacman.update()
+            self.ghostsGroup.update(game=gameObj)
+            self.score += len(spritecollide(self.pacman, gameMap.dots, True))
+            pillsColide = len(spritecollide(self.pacman, gameMap.powerPills, True))
+            if(pillsColide > 0):
+                self.score += pillsColide*10
+                for g in self.ghosts.values():
+                    g.scare()
+                        
+            if(len(self.map.dots.sprites()) == 0 and len(self.map.powerPills.sprites()) == 0):
+                    self.nextLevel()
+                    
+            colidedGhosts : List[Ghost] = spritecollide(self.pacman, self.ghostsGroup, False)
+            for g in colidedGhosts:
+                    if(g.state == GhostState.SCARED):
+                        g.eat()
+                        self.score += 100
+                    elif(g.state == GhostState.NORMAL): 
+                        self.state = GameState.DEFEAT
+                        self.pacman.currentAnimation = 1
+                        self.pacman.currentFrame = 0
+                        break
+        else:
+            self.pacman.update()
+            if(self.pacman.animationEnded):
+                self.reset() 
         self.map.dots.draw(self.screen)
         self.map.powerPills.draw(self.screen)
-        self.renderGroup.draw(self.screen)
-        self.pacman.update()
-        self.ghostsGroup.update(game=gameObj)
-        self.score += len(spritecollide(self.pacman, gameMap.dots, True))
-        pillsColide = len(spritecollide(self.pacman, gameMap.powerPills, True))
-        if(pillsColide > 0):
-            self.score += pillsColide*10
-            for g in self.ghosts.values():
-                g.scare()
-                    
-        if(len(self.map.dots.sprites()) == 0 and len(self.map.powerPills.sprites()) == 0):
-                self.nextLevel()
-                
-        colidedGhosts : List[Ghost] = spritecollide(self.pacman, self.ghostsGroup, False)
-        for g in colidedGhosts:
-                if(g.state == GhostState.SCARED):
-                    g.eat()
-                    self.score += 100
-                elif(g.state == GhostState.NORMAL): 
-                    self.reset()
-                    #self.pacman.currentAnimation = 1
-                    #self.pacman.currentFrame = 0
-                    break
-        
+        self.renderGroup.draw(self.screen)       
 
 
 def calcDistanceSqr(a : Tuple[int, int], b : Tuple[int, int]) -> int:
@@ -532,7 +551,7 @@ with open("map/mapData.txt", 'r') as file:
     mapData = file.read()
 
 gameMap = Map(16, mapData)
-player = Pacman(gameMap)
+player = Pacman(gameMap, [[ pygame.image.load(f"pacman/frame_{i}.png").convert()  for i in range(8)],[pygame.image.load(f"pacman/gameOver/frame_{i}.png").convert()  for i in range(42)]], 3)
 
 blinky = Ghost(gameMap, 
                 [[pygame.image.load(f"blinky/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)] + 
