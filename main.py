@@ -193,19 +193,25 @@ class Pacman(Sprite):
         self.frameCounter = frameDuration
         for i in range(len(frames)):
             for j in range(len(frames[i])):
-                frames[i][j] =  pygame.transform.scale(frames[i][j], (map.tileSize, map.tileSize))
+                frames[i][j] = pygame.transform.scale(frames[i][j], (map.tileSize, map.tileSize))
         self.angle = 0 
         self.__updateImage()
-        self.rect = pygame.Rect(map.playerStartPos[0]*map.tileSize , map.playerStartPos[1]*map.tileSize, map.tileSize - 1, map.tileSize - 1)
+        self.rect = pygame.Rect(map.playerStartPos[0] * map.tileSize, map.playerStartPos[1] * map.tileSize, map.tileSize - 1, map.tileSize - 1)
         self.map = map
         self.animationEnded = False
 
+        self.direction = None 
+        self.nextDirection = None 
+        self.isMoving = True
+        self.directionDelay = 10
+        self.directionCounter = 0
+
     def checkPortals(self):
-        if(self.getTile()[0] == 0):
+        if self.getTile()[0] == 0:
             self.rect = self.rect.move((self.map.width - 3) * self.map.tileSize, 0)
             return
         
-        if(self.getTile()[0] == self.map.width - 2):
+        if self.getTile()[0] == self.map.width - 2:
             self.rect = self.rect.move(-(self.map.width - 3) * self.map.tileSize, 0)
             return
 
@@ -213,13 +219,29 @@ class Pacman(Sprite):
         self.image = pygame.transform.rotate(self.frames[self.currentAnimation][self.currentFrame], self.angle)
 
     def update(self, *args, **kwargs):
+        if self.directionCounter > 0:
+            self.directionCounter -= 1
         
-        if(self.frameCounter != 0):
+        if self.nextDirection and self.canMove(self.nextDirection):
+            self.direction = self.nextDirection
+            self.nextDirection = None
+        
+        if self.isMoving:
+            if self.direction == "up":
+                self.moveUp(2)
+            elif self.direction == "down":
+                self.moveDown(2)
+            elif self.direction == "left":
+                self.moveLeft(2)
+            elif self.direction == "right":
+                self.moveRight(2)
+        
+        if self.frameCounter != 0:
             self.animationEnded = False
             self.frameCounter -= 1
             return super().update(*args, **kwargs)
         
-        if(self.currentFrame == len(self.frames[self.currentAnimation]) - 1):
+        if self.currentFrame == len(self.frames[self.currentAnimation]) - 1:
             self.currentFrame = 0
             self.animationEnded = True
         else:
@@ -236,11 +258,10 @@ class Pacman(Sprite):
         self.__updateImage()
         self.rect = pygame.Rect(self.map.playerStartPos[0]*self.map.tileSize , self.map.playerStartPos[1]*self.map.tileSize, self.map.tileSize - 1, self.map.tileSize - 1)
         self.animationEnded = False
+        self.direction = None
 
     def moveUp(self, step):
-        #print(self.rect.topleft)
-        if(self.map.isIntersect(*(self.rect.move(0, -step).topleft)) or 
-        self.map.isIntersect(*(self.rect.move(0, -step).topright))):
+        if not self.canMove("up"):
             return
         self.angle = 90
         self.__updateImage()
@@ -248,9 +269,7 @@ class Pacman(Sprite):
         self.rect = self.rect.move(0, -step)
 
     def moveDown(self, step):
-        #print(self.rect.topleft)
-        if(self.map.isIntersect(*(self.rect.move(0, step).bottomleft)) or 
-        self.map.isIntersect(*(self.rect.move(0, step).bottomright))):
+        if not self.canMove("down"):
             return
         self.angle = 270
         self.__updateImage()
@@ -258,9 +277,7 @@ class Pacman(Sprite):
         self.rect = self.rect.move(0, step)
 
     def moveLeft(self, step):
-        #print(self.rect.topleft)
-        if(self.map.isIntersect(*(self.rect.move(-step, 0).topleft)) or 
-        self.map.isIntersect(*(self.rect.move(-step, 0).bottomleft))):
+        if not self.canMove("left"):
             return
         self.angle = 180
         self.__updateImage()
@@ -268,14 +285,32 @@ class Pacman(Sprite):
         self.rect = self.rect.move(-step, 0)
 
     def moveRight(self, step):
-        #print(self.rect.topleft)
-        if(self.map.isIntersect(*(self.rect.move(step, 0).topright)) or 
-        self.map.isIntersect(*(self.rect.move(step, 0).bottomright))):
+        if not self.canMove("right"):
             return
         self.angle = 0
         self.__updateImage()
         self.checkPortals()
         self.rect = self.rect.move(step, 0)
+
+    def setDirection(self, new_direction): 
+        if self.nextDirection != new_direction and self.directionCounter == 0:
+            self.nextDirection = new_direction
+            self.directionCounter = self.directionDelay
+
+    def canMove(self, direction):
+        if direction == "up":
+            return not (self.map.isIntersect(*(self.rect.move(0, -2).topleft)) or 
+                        self.map.isIntersect(*(self.rect.move(0, -2).topright)))
+        elif direction == "down":
+            return not (self.map.isIntersect(*(self.rect.move(0, 2).bottomleft)) or 
+                        self.map.isIntersect(*(self.rect.move(0, 2).bottomright)))
+        elif direction == "left":
+            return not (self.map.isIntersect(*(self.rect.move(-2, 0).topleft)) or 
+                        self.map.isIntersect(*(self.rect.move(-2, 0).bottomleft)))
+        elif direction == "right":
+            return not (self.map.isIntersect(*(self.rect.move(2, 0).topright)) or 
+                        self.map.isIntersect(*(self.rect.move(2, 0).bottomright)))
+        return False
 
     def getTile(self) -> Tuple[int, int]:
         return (self.rect.topleft[0] // self.map.tileSize, self.rect.topleft[1] // self.map.tileSize)
@@ -340,13 +375,13 @@ class Game:
 
             keys = pygame.key.get_pressed()
             if keys[pygame.K_w]:
-                self.pacman.moveUp(2)
-            if keys[pygame.K_s]:
-                self.pacman.moveDown(2)
-            if keys[pygame.K_a]:
-                self.pacman.moveLeft(2)
-            if keys[pygame.K_d]:
-                self.pacman.moveRight(2)
+                self.pacman.setDirection("up")
+            elif keys[pygame.K_s]:
+                self.pacman.setDirection("down")
+            elif keys[pygame.K_a]:
+                self.pacman.setDirection("left")
+            elif keys[pygame.K_d]:
+                self.pacman.setDirection("right")
 
             
             self.pacman.update()
