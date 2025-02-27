@@ -1,4 +1,7 @@
 import pygame
+import pygame_menu
+from pygame_menu import themes
+from pygame_menu.widgets import Label, TextInput
 import random
 from pygame.sprite import * 
 from typing import Tuple, List, Callable, Dict
@@ -281,6 +284,7 @@ class GameState(Enum):
     PLAY = 0
     DEFEAT = 1
     OVER = 2
+    MENU = 3
 
 class Game:
     def __init__(self, screen : pygame.Surface ,map : Map, pacman : Pacman, ghosts : Dict[ str,"Ghost"], startLives : int, levels : List[List[int]],  bonusImage : pygame.Surface):
@@ -298,7 +302,7 @@ class Game:
         self.levels = levels
         self.currentLevel = 0
         self.score = 0
-        self.state = GameState.PLAY
+        self.state = GameState.MENU
 
     def startNewGame(self):
         self.currentLevel = 0
@@ -321,7 +325,7 @@ class Game:
     def nextLevel(self):
         self.currentLevel += 1
         if(self.currentLevel >= len(self.levels)):
-            self.state = GameState.OVER
+            self.state = GameState.MENU
             return
         self.startLevel()
                 
@@ -383,7 +387,7 @@ class Game:
             self.pacman.update()
             if(self.pacman.animationEnded):
                 if(self.lives == 0):
-                    self.state = GameState.OVER
+                    self.state = GameState.MENU
                 else:
                     self.reset() 
         self.map.dots.draw(self.screen)
@@ -670,22 +674,38 @@ clyde = Ghost(gameMap,
                )
 
 gameObj = Game(screen, gameMap, player, {"blinky" : blinky, "pinky" : pinky, "inky" : inky, "clyde" : clyde}, 3, [[30, 40], [30, 40]], pygame.image.load("cherry.png").convert_alpha(screen))
-gameObj.startNewGame()
+
+def startGame():
+    global gameObj
+    gameObj.startNewGame()
+
+mainMenu = pygame_menu.Menu("Pac-Man", screen.get_width(), screen.get_height(), theme=themes.THEME_DARK)
+mainMenu.add.button("Play", startGame)
+mainMenu.add.button("Quit", pygame_menu.events.EXIT)
 
 while running:
-    # poll for events
-    # pygame.QUIT event means the user clicked X to close your window
-    for event in pygame.event.get():
+
+    if(gameObj.state == GameState.MENU):
+        mainMenu.enable()
+    else:
+        mainMenu.disable()
+
+    
+
+    events = pygame.event.get()
+    for event in events:
         if event.type == pygame.QUIT:
-            running = False
+            exit()
+ 
+    if(mainMenu.is_enabled()):
+        mainMenu.update(events)
+        mainMenu.draw(screen)
 
+    
     gameObj.update()
-    # flip() the display to put your work on screen
-    pygame.display.flip()
+        
 
-    # limits FPS to 60
-    # dt is delta time in seconds since last frame, used for framerate-
-    # independent physics.
+    pygame.display.flip()
     clock.tick(60)
 
 pygame.quit()
