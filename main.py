@@ -345,6 +345,7 @@ class Ghost(Sprite):
     frameDuration : int,
     modes : List[int],
     speed : int,
+    returnSpeed : int,
     scaredTime : int,
     targetFuction : Callable[[Game], Tuple[int, int]],
     startX : int,
@@ -357,6 +358,8 @@ class Ghost(Sprite):
         super().__init__(*groups)
         self.map = map
         self.speed = speed
+        self.returnSpeed = returnSpeed
+        self.currentSpeed = self.speed
         self.targetFuction = targetFuction
         self.images = images
         for i in range(len(images)):
@@ -430,6 +433,7 @@ class Ghost(Sprite):
             self.state = GhostState.EATEN
             self.currentAnimation = 5
             self.currentFrame = 0
+            self.currentSpeed = self.returnSpeed
     
     def update(self, *args, **kwargs):
 
@@ -457,6 +461,7 @@ class Ghost(Sprite):
         newX == self.returnGoalX and
         newY == self.returnGoalY):
             self.state = GhostState.NORMAL
+            self.currentSpeed = self.speed
             
         if(self.state == GhostState.SCARED):
             self.scaredTimer -= 1
@@ -478,10 +483,10 @@ class Ghost(Sprite):
         bottomDistance = calcDistanceSqr((newX, newY + 1), targetCoords)
         rightDistance = calcDistanceSqr((newX + 1, newY), targetCoords)
         
-        directions = [(topDistance, newX, newY - 1, 0, -self.speed, 3), 
-                      (leftDistance, newX - 1, newY, -self.speed, 0, 0),
-                      (bottomDistance, newX, newY + 1, 0, self.speed, 2),
-                      (rightDistance, newX + 1, newY, self.speed, 0, 1)]
+        directions = [(topDistance, newX, newY - 1, 0, -self.currentSpeed, 3), 
+                      (leftDistance, newX - 1, newY, -self.currentSpeed, 0, 0),
+                      (bottomDistance, newX, newY + 1, 0, self.currentSpeed, 2),
+                      (rightDistance, newX + 1, newY, self.currentSpeed, 0, 1)]
         validDirections = [d for d in directions if(not (d[1] == self.curX and d[2] == self.curY) and not self.map.isWall(d[1], d[2]))]
         
         if(self.state != GhostState.SCARED):
@@ -522,6 +527,7 @@ blinky = Ghost(gameMap,
                 10,
                 [30, 30],
                 2,
+                4,
                 30,
                lambda g : g.pacman.getTile(),
                gameMap.ghostAfterReturnGoal[0],
@@ -539,6 +545,7 @@ pinky = Ghost(gameMap,
                 10,
                 [30, 30],
                 2,
+                4,
                 30,
                lambda g : (g.pacman.getTile()[0] + (4 if g.pacman.angle == 0 else (-4 if g.pacman.angle == 180 else 0)),
                            g.pacman.getTile()[1] + (4 if g.pacman.angle == 270 else (-4 if g.pacman.angle == 90 else 0))),
@@ -557,6 +564,7 @@ inky = Ghost(gameMap,
                 10,
                 [30, 30],
                 2,
+                4,
                 30,
                lambda g : (g.pacman.getTile()[0] + (g.pacman.getTile()[0] - g.ghosts["blinky"].curX),
                            g.pacman.getTile()[1] + (g.pacman.getTile()[1] - g.ghosts["blinky"].curY)),
@@ -575,6 +583,7 @@ clyde = Ghost(gameMap,
                 10,
                 [30, 30],
                 2,
+                4,
                 30,
                lambda g : (-1, gameMap.height) if calcDistanceSqr(g.pacman.getTile(), (g.ghosts["clyde"].curX,g.ghosts["clyde"].curY)) < 64 else g.pacman.getTile(),
                gameMap.ghostAfterReturnGoal[0] - 2,
