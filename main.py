@@ -282,15 +282,16 @@ class GameState(Enum):
     DEFEAT = 1
 
 class Game:
-    def __init__(self, screen : pygame.Surface ,map : Map, pacman : Pacman, ghosts : Dict[ str,"Ghost"]):
+    def __init__(self, screen : pygame.Surface ,map : Map, pacman : Pacman, ghosts : Dict[ str,"Ghost"],  bonusImage : pygame.Surface):
         self.screen = screen
         self.map = map
-        self.map.updateDots()
+        self.bonusImage = pygame.transform.scale(bonusImage, (self.map.tileSize, self.map.tileSize))
         self.background = self.map.generateImage()
         self.pacman = pacman
         self.ghosts = ghosts 
         self.ghostsGroup = Group(*ghosts.values())
         self.renderGroup = Group(*ghosts.values(), self.pacman)
+        self.bonusGroup = Group()
         self.currentLevel = 0
         self.score = 0
         self.state = GameState.PLAY
@@ -328,6 +329,8 @@ class Game:
             
             self.pacman.update()
             self.ghostsGroup.update(game=gameObj)
+            bonusColide = len(spritecollide(self.pacman, self.bonusGroup, True))
+            self.score += bonusColide*200
             self.score += len(spritecollide(self.pacman, gameMap.dots, True))
             pillsColide = len(spritecollide(self.pacman, gameMap.powerPills, True))
             if(pillsColide > 0):
@@ -348,6 +351,15 @@ class Game:
                         self.pacman.currentAnimation = 1
                         self.pacman.currentFrame = 0
                         break
+
+            if(random.randrange(1200) == 1):
+                bonusX = 0
+                bonusY = 0
+                while self.map.isWall(bonusX, bonusY):
+                    bonusX = random.randrange(self.map.width)
+                    bonusY = random.randrange(self.map.height)
+                AlighnedSprite(self.map, self.bonusImage, bonusX, bonusY, self.renderGroup, self.bonusGroup)
+
         else:
             self.pacman.update()
             if(self.pacman.animationEnded):
@@ -635,7 +647,7 @@ clyde = Ghost(gameMap,
                gameMap.ghostAfterReturnGoal[1]
                )
 
-gameObj = Game(screen, gameMap, player, {"blinky" : blinky, "pinky" : pinky, "inky" : inky, "clyde" : clyde})
+gameObj = Game(screen, gameMap, player, {"blinky" : blinky, "pinky" : pinky, "inky" : inky, "clyde" : clyde}, pygame.image.load("cherry.png").convert_alpha(screen))
 
 while running:
     # poll for events
