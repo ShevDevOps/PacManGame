@@ -259,6 +259,7 @@ class Pacman(Sprite):
         self.rect = pygame.Rect(self.map.playerStartPos[0]*self.map.tileSize , self.map.playerStartPos[1]*self.map.tileSize, self.map.tileSize - 1, self.map.tileSize - 1)
         self.animationEnded = False
         self.direction = None
+        self.nextDirection = None 
 
     def moveUp(self, step):
         if not self.canMove("up"):
@@ -405,7 +406,9 @@ class Game:
                         self.score += 100
                     elif(g.state == GhostState.NORMAL):
                         self.lives -= 1
-                        self.state = GameState.DEFEAT
+                        self.pacman.direction = None
+                        self.pacman.nextDirection = None
+                        self.state = GameState.DEFEAT 
                         self.pacman.currentAnimation = 1
                         self.pacman.currentFrame = 0
                         break
