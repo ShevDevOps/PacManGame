@@ -49,7 +49,8 @@ class Map:
         self.width = len(self.data[0])
         self.tileSize = tileSize
         self.ghostReturnGoal = (0,0)
-        self.ghostAfterReturnGoal = (0,0)
+        self.ghostAfterReturnGoal = (0,0) 
+        self.color_background = "Black"
         self.dots : Group = Group()
         self.powerPills : Group = Group()
         for y in range(self.height):
@@ -70,11 +71,14 @@ class Map:
 
     def generateImage(self) -> pygame.Surface: 
         result = pygame.Surface((self.tileSize*len(self.data[0]) + self.tileSize/2, self.tileSize*len(self.data) + self.tileSize/2))
-        result.fill('black')
+        result.fill(self.color_background)
         cornerTile = pygame.transform.scale(pygame.image.load(f"tiles/cornerTile.png").convert(), (self.tileSize, self.tileSize))
+        cornerTile.set_colorkey(pygame.Color(0,0,0))
         straightTile = pygame.transform.scale(pygame.image.load(f"tiles/straightTile.png").convert(), (self.tileSize, self.tileSize))
+        straightTile.set_colorkey(pygame.Color(0,0,0))
         passageTile = pygame.transform.scale(pygame.image.load(f"tiles/passageTile.png").convert(), (self.tileSize, self.tileSize))
-
+        passageTile.set_colorkey(pygame.Color(0,0,0))
+        
         for y in range(1, len(self.data) - 1):
             for x in range(1, len(self.data[y]) -1):
                 if(self.isWall(x, y) and
@@ -455,10 +459,23 @@ class LeaderBoard:
         self.message = ""
         return True
 
+
+class Settings:
+    def __init__(self, map : Map, game : Game, menuWidth: int, menuHeight: int):
+        self.map = map
+        self.game = game 
+        self.menu = pygame_menu.Menu("Settings", menuWidth, menuHeight, theme=themes.THEME_DARK) 
+        self.menu.add.selector("Background: ", [("Black", "black"), ("Dark gray", (47, 79, 79))], onchange=self.set_color_background)
+        self.menu.add.button("Back", pygame_menu.events.BACK) 
+        
+    def set_color_background(self, selected_value, color): 
+        self.map.color_background = color 
+        self.game.background = self.map.generateImage()
+
+
 def calcDistanceSqr(a : Tuple[int, int], b : Tuple[int, int]) -> int:
         return pow(a[0] - b[0], 2) + pow(a[1] - b[1], 2)
-        
-        
+       
 class Ghost(Sprite):
     def __init__(self, map : Map,
     images : List[List[pygame.Surface]],
@@ -743,6 +760,8 @@ mainMenu = pygame_menu.Menu("Pac-Man", screen.get_width(), screen.get_height(), 
 
 
 board = LeaderBoard(screen.get_width(), screen.get_height())
+settings = Settings(gameMap, gameObj, screen.get_width(), screen.get_height())
+
 gameOverMenu = pygame_menu.Menu("Game Over", screen.get_width(), screen.get_height(), theme=themes.THEME_DARK)
 
 def checkName(name : str, widget : TextInput):
@@ -761,8 +780,14 @@ def openBoard():
     global mainMenu
     mainMenu._open(board.menu)
 
+def openSettings(): 
+    global settings
+    global mainMenu
+    mainMenu._open(settings.menu)
+
 mainMenu.add.button("Play", startGame)
 mainMenu.add.button("Leader Board", openBoard)
+mainMenu.add.button("Settings", openSettings)
 mainMenu.add.button("Quit", pygame_menu.events.EXIT)
 
 scoreLabel : Label  =  gameOverMenu.add.label("Your Score is 0")
