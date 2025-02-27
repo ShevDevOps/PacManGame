@@ -204,6 +204,8 @@ class Pacman(Sprite):
         self.map = map
         self.animationEnded = False
 
+        self.speed = 2
+
         self.direction = None 
         self.nextDirection = None 
         self.isMoving = True
@@ -232,13 +234,13 @@ class Pacman(Sprite):
         
         if self.isMoving:
             if self.direction == "up":
-                self.moveUp(2)
+                self.moveUp(self.speed)
             elif self.direction == "down":
-                self.moveDown(2)
+                self.moveDown(self.speed)
             elif self.direction == "left":
-                self.moveLeft(2)
+                self.moveLeft(self.speed)
             elif self.direction == "right":
-                self.moveRight(2)
+                self.moveRight(self.speed)
         
         if self.frameCounter != 0:
             self.animationEnded = False
@@ -304,17 +306,17 @@ class Pacman(Sprite):
 
     def canMove(self, direction):
         if direction == "up":
-            return not (self.map.isIntersect(*(self.rect.move(0, -2).topleft)) or 
-                        self.map.isIntersect(*(self.rect.move(0, -2).topright)))
+            return not (self.map.isIntersect(*(self.rect.move(0, -self.speed).topleft)) or 
+                        self.map.isIntersect(*(self.rect.move(0, -self.speed).topright)))
         elif direction == "down":
-            return not (self.map.isIntersect(*(self.rect.move(0, 2).bottomleft)) or 
-                        self.map.isIntersect(*(self.rect.move(0, 2).bottomright)))
+            return not (self.map.isIntersect(*(self.rect.move(0, self.speed).bottomleft)) or 
+                        self.map.isIntersect(*(self.rect.move(0, self.speed).bottomright)))
         elif direction == "left":
-            return not (self.map.isIntersect(*(self.rect.move(-2, 0).topleft)) or 
-                        self.map.isIntersect(*(self.rect.move(-2, 0).bottomleft)))
+            return not (self.map.isIntersect(*(self.rect.move(-self.speed, 0).topleft)) or 
+                        self.map.isIntersect(*(self.rect.move(-self.speed, 0).bottomleft)))
         elif direction == "right":
-            return not (self.map.isIntersect(*(self.rect.move(2, 0).topright)) or 
-                        self.map.isIntersect(*(self.rect.move(2, 0).bottomright)))
+            return not (self.map.isIntersect(*(self.rect.move(self.speed, 0).topright)) or 
+                        self.map.isIntersect(*(self.rect.move(self.speed, 0).bottomright)))
         return False
 
     def getTile(self) -> Tuple[int, int]:
@@ -461,13 +463,23 @@ class LeaderBoard:
 
 
 class Settings:
-    def __init__(self, map : Map, game : Game, menuWidth: int, menuHeight: int):
+    def __init__(self, map : Map, game : Game, player : Pacman, menuWidth: int, menuHeight: int):
         self.map = map
-        self.game = game 
-        self.menu = pygame_menu.Menu("Settings", menuWidth, menuHeight, theme=themes.THEME_DARK) 
-        self.menu.add.selector("Background: ", [("Black", "black"), ("Dark gray", (47, 79, 79))], onchange=self.set_color_background)
-        self.menu.add.button("Back", pygame_menu.events.BACK) 
-        
+        self.game = game
+        self.player = player 
+        self.menu = pygame_menu.Menu("Settings", menuWidth, menuHeight, theme=themes.THEME_DARK)
+        #self.menu.add.selector("Speed Pacman: ", [ ("Normal", 2), ("Fast", 4), ("Slow", 1)], onchange=self.set_speed)
+        self.menu.add.selector("Lives Pacman: ", [ ("3", 3), ("1", 1), ("2", 2)], onchange=self.set_lives)
+        self.menu.add.selector("Background: ", [("Black", "black"), ("Red", "red")], onchange=self.set_color_background)
+        self.menu.add.button("Back", pygame_menu.events.BACK)
+
+    #def set_speed(self, selected_value, speed): 
+    #    self.player.speed = speed   
+
+    def set_lives(self, selected_value, lives): 
+        self.game.startLives = lives
+        self.game.lives = lives
+
     def set_color_background(self, selected_value, color): 
         self.map.color_background = color 
         self.game.background = self.map.generateImage()
@@ -760,7 +772,7 @@ mainMenu = pygame_menu.Menu("Pac-Man", screen.get_width(), screen.get_height(), 
 
 
 board = LeaderBoard(screen.get_width(), screen.get_height())
-settings = Settings(gameMap, gameObj, screen.get_width(), screen.get_height())
+settings = Settings(gameMap, gameObj, player, screen.get_width(), screen.get_height())
 
 gameOverMenu = pygame_menu.Menu("Game Over", screen.get_width(), screen.get_height(), theme=themes.THEME_DARK)
 
