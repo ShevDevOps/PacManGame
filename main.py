@@ -470,7 +470,7 @@ class Settings:
         self.menu = pygame_menu.Menu("Settings", menuWidth, menuHeight, theme=themes.THEME_DARK)
         #self.menu.add.selector("Speed Pacman: ", [ ("Normal", 2), ("Fast", 4), ("Slow", 1)], onchange=self.set_speed)
         self.menu.add.selector("Lives Pacman: ", [ ("3", 3), ("1", 1), ("2", 2)], onchange=self.set_lives)
-        self.menu.add.selector("Background: ", [("Black", "black"), ("Red", "red")], onchange=self.set_color_background)
+        self.menu.add.selector("Background: ", [("Black", "black"),  ("Dark gray", (47, 79, 79))], onchange=self.set_color_background)
         self.menu.add.button("Back", pygame_menu.events.BACK)
 
     #def set_speed(self, selected_value, speed): 
