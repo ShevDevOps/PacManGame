@@ -325,7 +325,7 @@ class Game:
     def nextLevel(self):
         self.currentLevel += 1
         if(self.currentLevel >= len(self.levels)):
-            self.state = GameState.MENU
+            self.state = GameState.OVER
             return
         self.startLevel()
                 
@@ -387,13 +387,35 @@ class Game:
             self.pacman.update()
             if(self.pacman.animationEnded):
                 if(self.lives == 0):
-                    self.state = GameState.MENU
+                    self.state = GameState.OVER
                 else:
                     self.reset() 
         self.map.dots.draw(self.screen)
         self.map.powerPills.draw(self.screen)
         self.renderGroup.draw(self.screen)       
 
+
+class LeaderBoard:
+    def __init__(self, menuWidth : int, menuHeight: int):
+        self.board = []
+        self.message = ""
+        self.menu = pygame_menu.Menu("Leader Board", menuWidth, menuHeight, theme=themes.THEME_DARK)
+        self.menu.add.button("Quit", pygame_menu.events.BACK)
+
+    def add(self, name : str, score : int):
+        if(self.check(name)):
+            self.board.append((name, score))
+            self.menu.add.label(f"{name} - {score}")
+            return True
+        return False
+
+    def check(self, name : str) -> bool:
+        for record in self.board:
+            if(record[0] == name):
+                self.message = f"\"{name}\" is already taken"
+                return False
+        self.message = ""
+        return True
 
 def calcDistanceSqr(a : Tuple[int, int], b : Tuple[int, int]) -> int:
         return pow(a[0] - b[0], 2) + pow(a[1] - b[1], 2)
@@ -680,8 +702,35 @@ def startGame():
     gameObj.startNewGame()
 
 mainMenu = pygame_menu.Menu("Pac-Man", screen.get_width(), screen.get_height(), theme=themes.THEME_DARK)
+
+
+board = LeaderBoard(screen.get_width(), screen.get_height())
+gameOverMenu = pygame_menu.Menu("Game Over", screen.get_width(), screen.get_height(), theme=themes.THEME_DARK)
+
+def checkName(name : str, widget : TextInput):
+    global board
+    board.check(name)
+
+def addName(name : str, widget : TextInput):
+    global gameObj
+    global board
+    if(board.add(name, gameObj.score)):
+        gameObj.state = GameState.MENU
+        widget.set_value("")
+
+def openBoard():
+    global board
+    global mainMenu
+    mainMenu._open(board.menu)
+
 mainMenu.add.button("Play", startGame)
+mainMenu.add.button("Leader Board", openBoard)
 mainMenu.add.button("Quit", pygame_menu.events.EXIT)
+
+scoreLabel : Label  =  gameOverMenu.add.label("Your Score is 0")
+warningLabel : Label = gameOverMenu.add.label("")
+nameInput : TextInput = gameOverMenu.add.text_input("Enter Your name:  ", onchange=checkName, onreturn=addName)
+nameInput.add_self_to_kwargs()
 
 while running:
 
@@ -690,7 +739,11 @@ while running:
     else:
         mainMenu.disable()
 
-    
+    if(gameObj.state == GameState.OVER):
+        gameOverMenu.enable()
+        warningLabel.set_title(board.message)
+    else:
+        gameOverMenu.disable()
 
     events = pygame.event.get()
     for event in events:
@@ -701,9 +754,14 @@ while running:
         mainMenu.update(events)
         mainMenu.draw(screen)
 
+    if(gameOverMenu.is_enabled()):
+        gameOverMenu.update(events)
+        gameOverMenu.draw(screen)
+
     
     gameObj.update()
-        
+    if(gameObj.state == GameState.OVER):
+        scoreLabel.set_title(f"Your Score is {gameObj.score}")    
 
     pygame.display.flip()
     clock.tick(60)
