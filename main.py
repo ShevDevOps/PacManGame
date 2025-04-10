@@ -392,11 +392,11 @@ class Game:
 
             
             self.pacman.update()
-            self.ghostsGroup.update(game=gameObj)
+            self.ghostsGroup.update(game=self)
             bonusColide = len(spritecollide(self.pacman, self.bonusGroup, True))
             self.score += bonusColide*200
-            self.score += len(spritecollide(self.pacman, gameMap.dots, True))
-            pillsColide = len(spritecollide(self.pacman, gameMap.powerPills, True))
+            self.score += len(spritecollide(self.pacman, self.map.dots, True))
+            pillsColide = len(spritecollide(self.pacman, self.map.powerPills, True))
             if(pillsColide > 0):
                 self.score += pillsColide*10
                 for g in self.ghosts.values():
@@ -665,180 +665,172 @@ class Ghost(Sprite):
         return super().update(*args, **kwargs)
 
 
+def main(): 
+    pygame.init()
+    screen = pygame.display.set_mode((470, 510))
+    clock = pygame.time.Clock()
+    running = True
+    dt = 0 
 
+    with open("map/mapData.txt", 'r') as file:
+        mapData = file.read()
 
-# pygame setup
-pygame.init()
-screen = pygame.display.set_mode((470, 510))
-clock = pygame.time.Clock()
-running = True
-dt = 0 
+    gameMap = Map(16, mapData)
+    player = Pacman(gameMap, [[ pygame.image.load(f"pacman/frame_{i}.png").convert()  for i in range(8)],[pygame.image.load(f"pacman/gameOver/frame_{i}.png").convert()  for i in range(42)]], 3)
 
-with open("map/mapData.txt", 'r') as file:
-    mapData = file.read()
+    blinky = Ghost(gameMap, 
+                    [[pygame.image.load(f"blinky/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)] + 
+                    [[pygame.image.load(f"scared/scared_{i}.png").convert() for i in range(2)]] +
+                    [[pygame.image.load(f"eaten/eaten.png").convert()]],
+                    10,
+                    [30, 30],
+                    2,
+                    4,
+                    30,
+                lambda g : g.pacman.getTile(),
+                gameMap.ghostAfterReturnGoal[0],
+                gameMap.ghostAfterReturnGoal[1],
+                -1,
+                -1,
+                gameMap.ghostReturnGoal[0],
+                gameMap.ghostReturnGoal[1],
+                gameMap.ghostAfterReturnGoal[0],
+                gameMap.ghostAfterReturnGoal[1]
+                )
 
-gameMap = Map(16, mapData)
-player = Pacman(gameMap, [[ pygame.image.load(f"pacman/frame_{i}.png").convert()  for i in range(8)],[pygame.image.load(f"pacman/gameOver/frame_{i}.png").convert()  for i in range(42)]], 3)
+    pinky = Ghost(gameMap, 
+                    [[pygame.image.load(f"pinky/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)] + 
+                    [[pygame.image.load(f"scared/scared_{i}.png").convert() for i in range(2)]] +
+                    [[pygame.image.load(f"eaten/eaten.png").convert()]],
+                    10,
+                    [30, 30],
+                    2,
+                    4,
+                    30,
+                lambda g : (g.pacman.getTile()[0] + (4 if g.pacman.angle == 0 else (-4 if g.pacman.angle == 180 else 0)),
+                            g.pacman.getTile()[1] + (4 if g.pacman.angle == 270 else (-4 if g.pacman.angle == 90 else 0))),
+                gameMap.ghostAfterReturnGoal[0] - 1,
+                gameMap.ghostAfterReturnGoal[1],
+                gameMap.width,
+                -1,
+                gameMap.ghostReturnGoal[0],
+                gameMap.ghostReturnGoal[1],
+                gameMap.ghostAfterReturnGoal[0],
+                gameMap.ghostAfterReturnGoal[1]
+                )
 
-blinky = Ghost(gameMap, 
-                [[pygame.image.load(f"blinky/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)] + 
-                [[pygame.image.load(f"scared/scared_{i}.png").convert() for i in range(2)]] +
-                [[pygame.image.load(f"eaten/eaten.png").convert()]],
-                10,
-                [30, 30],
-                2,
-                4,
-                30,
-               lambda g : g.pacman.getTile(),
-               gameMap.ghostAfterReturnGoal[0],
-               gameMap.ghostAfterReturnGoal[1],
-               -1,
-               -1,
-               gameMap.ghostReturnGoal[0],
-               gameMap.ghostReturnGoal[1],
-               gameMap.ghostAfterReturnGoal[0],
-               gameMap.ghostAfterReturnGoal[1]
-               )
+    inky = Ghost(gameMap, 
+                    [[pygame.image.load(f"inky/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)] + 
+                    [[pygame.image.load(f"scared/scared_{i}.png").convert() for i in range(2)]] +
+                    [[pygame.image.load(f"eaten/eaten.png").convert()]],
+                    10,
+                    [30, 30],
+                    2,
+                    4,
+                    30,
+                lambda g : (g.pacman.getTile()[0] + (g.pacman.getTile()[0] - g.ghosts["blinky"].curX),
+                            g.pacman.getTile()[1] + (g.pacman.getTile()[1] - g.ghosts["blinky"].curY)),
+                gameMap.ghostAfterReturnGoal[0] + 1,
+                gameMap.ghostAfterReturnGoal[1],
+                gameMap.width,
+                gameMap.height,
+                gameMap.ghostReturnGoal[0],
+                gameMap.ghostReturnGoal[1],
+                gameMap.ghostAfterReturnGoal[0],
+                gameMap.ghostAfterReturnGoal[1]
+                )
 
-pinky = Ghost(gameMap, 
-                [[pygame.image.load(f"pinky/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)] + 
-                [[pygame.image.load(f"scared/scared_{i}.png").convert() for i in range(2)]] +
-                [[pygame.image.load(f"eaten/eaten.png").convert()]],
-                10,
-                [30, 30],
-                2,
-                4,
-                30,
-               lambda g : (g.pacman.getTile()[0] + (4 if g.pacman.angle == 0 else (-4 if g.pacman.angle == 180 else 0)),
-                           g.pacman.getTile()[1] + (4 if g.pacman.angle == 270 else (-4 if g.pacman.angle == 90 else 0))),
-               gameMap.ghostAfterReturnGoal[0] - 1,
-               gameMap.ghostAfterReturnGoal[1],
-               gameMap.width,
-               -1,
-               gameMap.ghostReturnGoal[0],
-               gameMap.ghostReturnGoal[1],
-               gameMap.ghostAfterReturnGoal[0],
-               gameMap.ghostAfterReturnGoal[1]
-               )
+    clyde = Ghost(gameMap, 
+                    [[pygame.image.load(f"clyde/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)] + 
+                    [[pygame.image.load(f"scared/scared_{i}.png").convert() for i in range(2)]] +
+                    [[pygame.image.load(f"eaten/eaten.png").convert()]],
+                    10,
+                    [30, 30],
+                    2,
+                    4,
+                    30,
+                lambda g : (-1, gameMap.height) if calcDistanceSqr(g.pacman.getTile(), (g.ghosts["clyde"].curX,g.ghosts["clyde"].curY)) < 64 else g.pacman.getTile(),
+                gameMap.ghostAfterReturnGoal[0] - 2,
+                gameMap.ghostAfterReturnGoal[1],
+                -1,
+                gameMap.height,
+                gameMap.ghostReturnGoal[0],
+                gameMap.ghostReturnGoal[1],
+                gameMap.ghostAfterReturnGoal[0],
+                gameMap.ghostAfterReturnGoal[1]
+                )
 
-inky = Ghost(gameMap, 
-                [[pygame.image.load(f"inky/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)] + 
-                [[pygame.image.load(f"scared/scared_{i}.png").convert() for i in range(2)]] +
-                [[pygame.image.load(f"eaten/eaten.png").convert()]],
-                10,
-                [30, 30],
-                2,
-                4,
-                30,
-               lambda g : (g.pacman.getTile()[0] + (g.pacman.getTile()[0] - g.ghosts["blinky"].curX),
-                           g.pacman.getTile()[1] + (g.pacman.getTile()[1] - g.ghosts["blinky"].curY)),
-               gameMap.ghostAfterReturnGoal[0] + 1,
-               gameMap.ghostAfterReturnGoal[1],
-               gameMap.width,
-               gameMap.height,
-               gameMap.ghostReturnGoal[0],
-               gameMap.ghostReturnGoal[1],
-               gameMap.ghostAfterReturnGoal[0],
-               gameMap.ghostAfterReturnGoal[1]
-               )
+    gameObj = Game(screen, gameMap, player, {"blinky" : blinky, "pinky" : pinky, "inky" : inky, "clyde" : clyde}, 3, [[30, 40], [30, 40]], pygame.image.load("cherry.png").convert_alpha(screen))
 
-clyde = Ghost(gameMap, 
-                [[pygame.image.load(f"clyde/frame_{i}_{j}.png").convert() for j in range(2)] for i in range(4)] + 
-                [[pygame.image.load(f"scared/scared_{i}.png").convert() for i in range(2)]] +
-                [[pygame.image.load(f"eaten/eaten.png").convert()]],
-                10,
-                [30, 30],
-                2,
-                4,
-                30,
-               lambda g : (-1, gameMap.height) if calcDistanceSqr(g.pacman.getTile(), (g.ghosts["clyde"].curX,g.ghosts["clyde"].curY)) < 64 else g.pacman.getTile(),
-               gameMap.ghostAfterReturnGoal[0] - 2,
-               gameMap.ghostAfterReturnGoal[1],
-               -1,
-               gameMap.height,
-               gameMap.ghostReturnGoal[0],
-               gameMap.ghostReturnGoal[1],
-               gameMap.ghostAfterReturnGoal[0],
-               gameMap.ghostAfterReturnGoal[1]
-               )
+    mainMenu = pygame_menu.Menu("Pac-Man", screen.get_width(), screen.get_height(), theme=themes.THEME_DARK)
 
-gameObj = Game(screen, gameMap, player, {"blinky" : blinky, "pinky" : pinky, "inky" : inky, "clyde" : clyde}, 3, [[30, 40], [30, 40]], pygame.image.load("cherry.png").convert_alpha(screen))
+    board = LeaderBoard(screen.get_width(), screen.get_height())
 
-def startGame():
-    global gameObj
-    gameObj.startNewGame()
+    settings = Settings(gameMap, gameObj, player, screen.get_width(), screen.get_height())
 
-mainMenu = pygame_menu.Menu("Pac-Man", screen.get_width(), screen.get_height(), theme=themes.THEME_DARK)
-
-
-board = LeaderBoard(screen.get_width(), screen.get_height())
-settings = Settings(gameMap, gameObj, player, screen.get_width(), screen.get_height())
-
-gameOverMenu = pygame_menu.Menu("Game Over", screen.get_width(), screen.get_height(), theme=themes.THEME_DARK)
-
-def checkName(name : str, widget : TextInput):
-    global board
-    board.check(name)
-
-def addName(name : str, widget : TextInput):
-    global gameObj
-    global board
-    if(board.add(name, gameObj.score)):
-        gameObj.state = GameState.MENU
-        widget.set_value("")
-
-def openBoard():
-    global board
-    global mainMenu
-    mainMenu._open(board.menu)
-
-def openSettings(): 
-    global settings
-    global mainMenu
-    mainMenu._open(settings.menu)
-
-mainMenu.add.button("Play", startGame)
-mainMenu.add.button("Leader Board", openBoard)
-mainMenu.add.button("Settings", openSettings)
-mainMenu.add.button("Quit", pygame_menu.events.EXIT)
-
-scoreLabel : Label  =  gameOverMenu.add.label("Your Score is 0")
-warningLabel : Label = gameOverMenu.add.label("")
-nameInput : TextInput = gameOverMenu.add.text_input("Enter Your name:  ", onchange=checkName, onreturn=addName)
-nameInput.add_self_to_kwargs()
-
-while running:
-
-    if(gameObj.state == GameState.MENU):
-        mainMenu.enable()
-    else:
-        mainMenu.disable()
-
-    if(gameObj.state == GameState.OVER):
-        gameOverMenu.enable()
-        warningLabel.set_title(board.message)
-    else:
-        gameOverMenu.disable()
-
-    events = pygame.event.get()
-    for event in events:
-        if event.type == pygame.QUIT:
-            exit()
- 
-    if(mainMenu.is_enabled()):
-        mainMenu.update(events)
-        mainMenu.draw(screen)
-
-    if(gameOverMenu.is_enabled()):
-        gameOverMenu.update(events)
-        gameOverMenu.draw(screen)
-
+    gameOverMenu = pygame_menu.Menu("Game Over", screen.get_width(), screen.get_height(), theme=themes.THEME_DARK)
     
-    gameObj.update()
-    if(gameObj.state == GameState.OVER):
-        scoreLabel.set_title(f"Your Score is {gameObj.score}")    
+    def startGame():
+        gameObj.startNewGame()
 
-    pygame.display.flip()
-    clock.tick(60)
+    def checkName(name : str, widget : TextInput): 
+        board.check(name)
 
+    def addName(name : str, widget : TextInput): 
+        if(board.add(name, gameObj.score)):
+            gameObj.state = GameState.MENU
+            widget.set_value("")
+
+    def openBoard(): 
+        mainMenu._open(board.menu)
+
+    def openSettings():  
+        mainMenu._open(settings.menu)
+
+    mainMenu.add.button("Play", startGame)
+    mainMenu.add.button("Leader Board", openBoard)
+    mainMenu.add.button("Settings", openSettings)
+    mainMenu.add.button("Quit", pygame_menu.events.EXIT)
+
+    scoreLabel : Label  =  gameOverMenu.add.label("Your Score is 0")
+    warningLabel : Label = gameOverMenu.add.label("")
+    nameInput : TextInput = gameOverMenu.add.text_input("Enter Your name:  ", onchange=checkName, onreturn=addName)
+    nameInput.add_self_to_kwargs()
+
+    while running:
+
+        if(gameObj.state == GameState.MENU):
+            mainMenu.enable()
+        else:
+            mainMenu.disable()
+
+        if(gameObj.state == GameState.OVER):
+            gameOverMenu.enable()
+            warningLabel.set_title(board.message)
+        else:
+            gameOverMenu.disable()
+
+        events = pygame.event.get()
+        for event in events:
+            if event.type == pygame.QUIT:
+                exit()
+    
+        if(mainMenu.is_enabled()):
+            mainMenu.update(events)
+            mainMenu.draw(screen)
+
+        if(gameOverMenu.is_enabled()):
+            gameOverMenu.update(events)
+            gameOverMenu.draw(screen)
+
+        
+        gameObj.update()
+        if(gameObj.state == GameState.OVER):
+            scoreLabel.set_title(f"Your Score is {gameObj.score}")    
+
+        pygame.display.flip()
+        clock.tick(60) 
+ 
+if __name__ == "__main__":
+    main()
 pygame.quit()
