@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from main import Settings, Map, Game, Pacman
 
 
@@ -29,7 +29,8 @@ def settings_instance(mock_dependencies):
     """Створює екземпляр Settings з моками."""
     mock_map, mock_game, mock_pacman = mock_dependencies
     s = Settings(
-        map=mock_map, game=mock_game, player=mock_pacman, menuWidth=100, menuHeight=100
+        map=mock_map, game=mock_game,
+        player=mock_pacman, menuWidth=100, menuHeight=100
     )
     return s
 
@@ -51,7 +52,8 @@ def test_settings_set_lives(settings_instance, mock_dependencies):
 
 
 def test_settings_set_color_background(settings_instance, mock_dependencies):
-    """Tests changing the background color and updating the background image."""
+    """Tests changing the background color
+    and updating the background image."""
     mock_map, mock_game, mock_pacman = mock_dependencies
     new_color = (10, 20, 30)
     settings_instance.set_color_background(None, new_color)

@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from main import Pacman, Map
 
 
@@ -128,9 +128,11 @@ def test_pacman_set_direction(pacman_player):
     ],
 )
 def test_pacman_can_move(
-    pacman_player, mock_map, direction, mock_isIntersect_side_effects, expected_can_move
+    pacman_player, mock_map, direction,
+    mock_isIntersect_side_effects, expected_can_move
 ):
-    """Tests canMove logic with isIntersect soaking, taking into account short-circuiting."""
+    """Tests canMove logic with isIntersect soaking,
+    taking into account short-circuiting."""
     mock_map.isIntersect.side_effect = mock_isIntersect_side_effects
 
     mock_map.isIntersect.reset_mock()
@@ -141,11 +143,13 @@ def test_pacman_can_move(
     if mock_isIntersect_side_effects[0] is True:
         assert (
             mock_map.isIntersect.call_count == 1
-        ), f"Очікувався 1 виклик isIntersect (short-circuit), але було {mock_map.isIntersect.call_count}"
+        ), f"Очікувався 1 виклик isIntersect (short-circuit),\
+        але було {mock_map.isIntersect.call_count}"
     else:
         assert (
             mock_map.isIntersect.call_count == 2
-        ), f"Очікувалося 2 виклики isIntersect, але було {mock_map.isIntersect.call_count}"
+        ), f"Очікувалося 2 виклики isIntersect,\
+        але було {mock_map.isIntersect.call_count}"
 
 
 def test_pacman_get_tile(pacman_player, mock_map):

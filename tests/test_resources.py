@@ -1,5 +1,4 @@
 import pytest
-import os
 from pathlib import Path
 
 BASE_DIR = Path(".")
@@ -55,10 +54,12 @@ def test_resource_file_exists(filepath_str):
     assert (
         resource_path.is_file()
     ), f"Файл ресурсу НЕ знайдено: {resource_path.resolve()}"
-    # assert os.path.isfile(resource_path), f"Файл ресурсу НЕ знайдено: {os.path.abspath(resource_path)}"
+    # assert os.path.isfile(resource_path),
+    # f"Файл ресурсу НЕ знайдено: {os.path.abspath(resource_path)}"
 
 
-# Додатковий тест для перевірки існування директорій (необов'язково, але корисно)
+# Додатковий тест для перевірки
+# існування директорій (необов'язково, але корисно)
 EXPECTED_DIRS = [
     "map",
     "tiles",

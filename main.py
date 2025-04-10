@@ -3,7 +3,7 @@ import pygame_menu
 from pygame_menu import themes
 from pygame_menu.widgets import Label, TextInput
 import random
-from pygame.sprite import *
+from pygame.sprite import Sprite, Group, spritecollide
 from typing import Tuple, List, Callable, Dict
 from enum import Enum
 
@@ -26,10 +26,17 @@ class Tile:
 
 
 class AlighnedSprite(Sprite):
-    def __init__(self, map: "Map", image: pygame.Surface, x: int, y: int, *groups):
+    def __init__(
+            self,
+            map: "Map",
+            image: pygame.Surface,
+            x: int,
+            y: int,
+            *groups):
         super().__init__(*groups)
         self.image = image
-        self.rect = (x * map.tileSize, y * map.tileSize, map.tileSize, map.tileSize)
+        self.rect = (x * map.tileSize, y * map.tileSize,
+                     map.tileSize, map.tileSize)
 
 
 class GhostState(Enum):
@@ -44,7 +51,7 @@ class Map:
         lst = data.split("\n")
         it = iter(lst)
         the_len = len(next(it))
-        if not all(len(l) == the_len for l in it):
+        if not all(len(length) == the_len for length in it):
             self.data = [[]]
         else:
             self.data = [[Tile(c) for c in s] for s in lst]
@@ -65,7 +72,11 @@ class Map:
                 if lst[y][x] == "g":
                     self.ghostAfterReturnGoal = (x, y)
 
-    def isWall(self, x: int, y: int, state: GhostState = GhostState.NORMAL) -> bool:
+    def isWall(
+            self,
+            x: int,
+            y: int,
+            state: GhostState = GhostState.NORMAL) -> bool:
         if (
             x < 0
             or y < 0
@@ -105,17 +116,17 @@ class Map:
         )
         result.fill(self.color_background)
         cornerTile = pygame.transform.scale(
-            pygame.image.load(f"tiles/cornerTile.png").convert(),
+            pygame.image.load("tiles/cornerTile.png").convert(),
             (self.tileSize, self.tileSize),
         )
         cornerTile.set_colorkey(pygame.Color(0, 0, 0))
         straightTile = pygame.transform.scale(
-            pygame.image.load(f"tiles/straightTile.png").convert(),
+            pygame.image.load("tiles/straightTile.png").convert(),
             (self.tileSize, self.tileSize),
         )
         straightTile.set_colorkey(pygame.Color(0, 0, 0))
         passageTile = pygame.transform.scale(
-            pygame.image.load(f"tiles/passageTile.png").convert(),
+            pygame.image.load("tiles/passageTile.png").convert(),
             (self.tileSize, self.tileSize),
         )
         passageTile.set_colorkey(pygame.Color(0, 0, 0))
@@ -248,11 +259,13 @@ class Map:
         self.killSprites(self.powerPills)
 
         dotImage = pygame.transform.scale(
-            pygame.image.load("dots/dot.png").convert(), (self.tileSize, self.tileSize)
+            pygame.image.load(
+                "dots/dot.png").convert(), (self.tileSize, self.tileSize)
         )
         dotImage.set_colorkey(pygame.Color(0, 0, 0))
         pillImage = pygame.transform.scale(
-            pygame.image.load("dots/pill.png").convert(), (self.tileSize, self.tileSize)
+            pygame.image.load(
+                "dots/pill.png").convert(), (self.tileSize, self.tileSize)
         )
         pillImage.set_colorkey(pygame.Color(0, 0, 0))
         for y in range(self.height):
@@ -264,9 +277,11 @@ class Map:
 
 
 class Pacman(Sprite):
-    def __init__(
-        self, map: Map, frames: List[List[pygame.Surface]], frameDuration: int, *groups
-    ):
+    def __init__(self,
+                 map: Map,
+                 frames: List[List[pygame.Surface]],
+                 frameDuration: int,
+                 *groups):
         super().__init__(*groups)
         self.frames = frames
         self.currentAnimation = 0
@@ -299,11 +314,13 @@ class Pacman(Sprite):
 
     def checkPortals(self):
         if self.getTile()[0] == 0:
-            self.rect = self.rect.move((self.map.width - 3) * self.map.tileSize, 0)
+            self.rect = self.rect.move(
+                (self.map.width - 3) * self.map.tileSize, 0)
             return
 
         if self.getTile()[0] == self.map.width - 2:
-            self.rect = self.rect.move(-(self.map.width - 3) * self.map.tileSize, 0)
+            self.rect = self.rect.move(-(self.map.width - 3)
+                                       * self.map.tileSize, 0)
             return
 
     def __updateImage(self):
@@ -399,23 +416,44 @@ class Pacman(Sprite):
     def canMove(self, direction):
         if direction == "up":
             return not (
-                self.map.isIntersect(*(self.rect.move(0, -self.speed).topleft))
-                or self.map.isIntersect(*(self.rect.move(0, -self.speed).topright))
+                self.
+                map.
+                isIntersect(*(self.rect.move(0, -self.speed).topleft))
+                or
+                self.
+                map.
+                isIntersect(*(self.rect.move(0, -self.speed).topright))
             )
         elif direction == "down":
             return not (
-                self.map.isIntersect(*(self.rect.move(0, self.speed).bottomleft))
-                or self.map.isIntersect(*(self.rect.move(0, self.speed).bottomright))
+                self.
+                map.
+                isIntersect(
+                    *(self.rect.move(0, self.speed).bottomleft))
+                or
+                self.
+                map.
+                isIntersect(*(self.rect.move(0, self.speed).bottomright))
             )
         elif direction == "left":
             return not (
-                self.map.isIntersect(*(self.rect.move(-self.speed, 0).topleft))
-                or self.map.isIntersect(*(self.rect.move(-self.speed, 0).bottomleft))
+                self.
+                map.
+                isIntersect(*(self.rect.move(-self.speed, 0).topleft))
+                or
+                self.
+                map.
+                isIntersect(*(self.rect.move(-self.speed, 0).bottomleft))
             )
         elif direction == "right":
             return not (
-                self.map.isIntersect(*(self.rect.move(self.speed, 0).topright))
-                or self.map.isIntersect(*(self.rect.move(self.speed, 0).bottomright))
+                self.
+                map.
+                isIntersect(*(self.rect.move(self.speed, 0).topright))
+                or
+                self.
+                map.
+                isIntersect(*(self.rect.move(self.speed, 0).bottomright))
             )
         return False
 
@@ -508,10 +546,12 @@ class Game:
 
             self.pacman.update()
             self.ghostsGroup.update(game=self)
-            bonusColide = len(spritecollide(self.pacman, self.bonusGroup, True))
+            bonusColide = len(spritecollide(
+                self.pacman, self.bonusGroup, True))
             self.score += bonusColide * 200
             self.score += len(spritecollide(self.pacman, self.map.dots, True))
-            pillsColide = len(spritecollide(self.pacman, self.map.powerPills, True))
+            pillsColide = len(spritecollide(
+                self.pacman, self.map.powerPills, True))
             if pillsColide > 0:
                 self.score += pillsColide * 10
                 for g in self.ghosts.values():
@@ -593,18 +633,24 @@ class LeaderBoard:
 
 class Settings:
     def __init__(
-        self, map: Map, game: Game, player: Pacman, menuWidth: int, menuHeight: int
-    ):
+            self,
+            map: Map,
+            game: Game,
+            player: Pacman,
+            menuWidth: int,
+            menuHeight: int):
         self.map = map
         self.game = game
         self.player = player
         self.menu = pygame_menu.Menu(
             "Settings", menuWidth, menuHeight, theme=themes.THEME_DARK
         )
-        # self.menu.add.selector("Speed Pacman: ", [ ("Normal", 2), ("Fast", 4), ("Slow", 1)], onchange=self.set_speed)
+        # self.menu.add.selector("Speed Pacman: ",
+        # [ ("Normal", 2), ("Fast", 4), ("Slow", 1)],
+        #  onchange=self.set_speed)
         self.menu.add.selector(
-            "Lives Pacman: ", [("3", 3), ("1", 1), ("2", 2)], onchange=self.set_lives
-        )
+            "Lives Pacman: ", [
+                ("3", 3), ("1", 1), ("2", 2)], onchange=self.set_lives)
         self.menu.add.selector(
             "Background: ",
             [("Black", "black"), ("Dark gray", (47, 79, 79))],
@@ -667,8 +713,10 @@ class Ghost(Sprite):
         self.frameDuration = frameDuration
         self.currentFrameDuration = frameDuration
         self.rect = pygame.Rect(
-            startX * map.tileSize, startY * map.tileSize, map.tileSize, map.tileSize
-        )
+            startX * map.tileSize,
+            startY * map.tileSize,
+            map.tileSize,
+            map.tileSize)
         self.startX = startX
         self.startY = startY
         self.curX = startX
@@ -758,13 +806,19 @@ class Ghost(Sprite):
 
         if newX == 0:
             self.rect = self.rect.move(
-                self.map.width * self.map.tileSize + self.dX - self.map.tileSize, 0
-            )
+                self.map.width *
+                self.map.tileSize +
+                self.dX -
+                self.map.tileSize,
+                0)
             return
 
         if newX == self.map.width - 1:
             self.rect = self.rect.move(
-                -self.map.width * self.map.tileSize + self.dX + self.map.tileSize, 0
+                -self.map.width *
+                self.map.tileSize +
+                self.dX +
+                self.map.tileSize, 0
             )
             return
 
@@ -841,7 +895,6 @@ def main():
     screen = pygame.display.set_mode((470, 510))
     clock = pygame.time.Clock()
     running = True
-    dt = 0
 
     with open("map/mapData.txt", "r") as file:
         mapData = file.read()
@@ -850,7 +903,8 @@ def main():
     player = Pacman(
         gameMap,
         [
-            [pygame.image.load(f"pacman/frame_{i}.png").convert() for i in range(8)],
+            [pygame.image.load(
+                f"pacman/frame_{i}.png").convert() for i in range(8)],
             [
                 pygame.image.load(f"pacman/gameOver/frame_{i}.png").convert()
                 for i in range(42)
@@ -862,11 +916,13 @@ def main():
     blinky = Ghost(
         gameMap,
         [
-            [pygame.image.load(f"blinky/frame_{i}_{j}.png").convert() for j in range(2)]
+            [pygame.image.load(
+                f"blinky/frame_{i}_{j}.png").convert() for j in range(2)]
             for i in range(4)
         ]
-        + [[pygame.image.load(f"scared/scared_{i}.png").convert() for i in range(2)]]
-        + [[pygame.image.load(f"eaten/eaten.png").convert()]],
+        + [[pygame.image.load(f"scared/scared_{i}.png").convert()
+            for i in range(2)]]
+        + [[pygame.image.load("eaten/eaten.png").convert()]],
         10,
         [30, 30],
         2,
@@ -886,11 +942,13 @@ def main():
     pinky = Ghost(
         gameMap,
         [
-            [pygame.image.load(f"pinky/frame_{i}_{j}.png").convert() for j in range(2)]
+            [pygame.image.load(
+                f"pinky/frame_{i}_{j}.png").convert() for j in range(2)]
             for i in range(4)
         ]
-        + [[pygame.image.load(f"scared/scared_{i}.png").convert() for i in range(2)]]
-        + [[pygame.image.load(f"eaten/eaten.png").convert()]],
+        + [[pygame.image.load(f"scared/scared_{i}.png").convert()
+            for i in range(2)]]
+        + [[pygame.image.load("eaten/eaten.png").convert()]],
         10,
         [30, 30],
         2,
@@ -898,9 +956,11 @@ def main():
         30,
         lambda g: (
             g.pacman.getTile()[0]
-            + (4 if g.pacman.angle == 0 else (-4 if g.pacman.angle == 180 else 0)),
+            + (4 if g.pacman.angle == 0
+                else (-4 if g.pacman.angle == 180 else 0)),
             g.pacman.getTile()[1]
-            + (4 if g.pacman.angle == 270 else (-4 if g.pacman.angle == 90 else 0)),
+            + (4 if g.pacman.angle == 270
+                else (-4 if g.pacman.angle == 90 else 0)),
         ),
         gameMap.ghostAfterReturnGoal[0] - 1,
         gameMap.ghostAfterReturnGoal[1],
@@ -915,19 +975,23 @@ def main():
     inky = Ghost(
         gameMap,
         [
-            [pygame.image.load(f"inky/frame_{i}_{j}.png").convert() for j in range(2)]
+            [pygame.image.load(
+                f"inky/frame_{i}_{j}.png").convert() for j in range(2)]
             for i in range(4)
         ]
-        + [[pygame.image.load(f"scared/scared_{i}.png").convert() for i in range(2)]]
-        + [[pygame.image.load(f"eaten/eaten.png").convert()]],
+        + [[pygame.image.load(f"scared/scared_{i}.png").convert()
+            for i in range(2)]]
+        + [[pygame.image.load("eaten/eaten.png").convert()]],
         10,
         [30, 30],
         2,
         4,
         30,
         lambda g: (
-            g.pacman.getTile()[0] + (g.pacman.getTile()[0] - g.ghosts["blinky"].curX),
-            g.pacman.getTile()[1] + (g.pacman.getTile()[1] - g.ghosts["blinky"].curY),
+            g.pacman.getTile()[0] + (g.pacman.getTile()
+                                     [0] - g.ghosts["blinky"].curX),
+            g.pacman.getTile()[1] + (g.pacman.getTile()
+                                     [1] - g.ghosts["blinky"].curY),
         ),
         gameMap.ghostAfterReturnGoal[0] + 1,
         gameMap.ghostAfterReturnGoal[1],
@@ -942,11 +1006,13 @@ def main():
     clyde = Ghost(
         gameMap,
         [
-            [pygame.image.load(f"clyde/frame_{i}_{j}.png").convert() for j in range(2)]
+            [pygame.image.load(
+                f"clyde/frame_{i}_{j}.png").convert() for j in range(2)]
             for i in range(4)
         ]
-        + [[pygame.image.load(f"scared/scared_{i}.png").convert() for i in range(2)]]
-        + [[pygame.image.load(f"eaten/eaten.png").convert()]],
+        + [[pygame.image.load(f"scared/scared_{i}.png").convert()
+            for i in range(2)]]
+        + [[pygame.image.load("eaten/eaten.png").convert()]],
         10,
         [30, 30],
         2,
@@ -955,7 +1021,8 @@ def main():
         lambda g: (
             (-1, gameMap.height)
             if calcDistanceSqr(
-                g.pacman.getTile(), (g.ghosts["clyde"].curX, g.ghosts["clyde"].curY)
+                g.pacman.getTile(
+                ), (g.ghosts["clyde"].curX, g.ghosts["clyde"].curY)
             )
             < 64
             else g.pacman.getTile()
@@ -981,8 +1048,10 @@ def main():
     )
 
     mainMenu = pygame_menu.Menu(
-        "Pac-Man", screen.get_width(), screen.get_height(), theme=themes.THEME_DARK
-    )
+        "Pac-Man",
+        screen.get_width(),
+        screen.get_height(),
+        theme=themes.THEME_DARK)
 
     board = LeaderBoard(screen.get_width(), screen.get_height())
 
@@ -991,8 +1060,10 @@ def main():
     )
 
     gameOverMenu = pygame_menu.Menu(
-        "Game Over", screen.get_width(), screen.get_height(), theme=themes.THEME_DARK
-    )
+        "Game Over",
+        screen.get_width(),
+        screen.get_height(),
+        theme=themes.THEME_DARK)
 
     def startGame():
         gameObj.startNewGame()

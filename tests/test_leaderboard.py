@@ -1,10 +1,11 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from main import LeaderBoard  # Замініть 'main'
 
 
 # Мокаємо pygame_menu, щоб уникнути реальної ініціалізації UI
-@pytest.fixture(autouse=True)  # Застосовуємо автоматично до всіх тестів у файлі
+@pytest.fixture(autouse=True)
+# Застосовуємо автоматично до всіх тестів у файлі
 def mock_pygame_menu(mocker):
     mocker.patch("main.pygame_menu.Menu", return_value=MagicMock())
     mocker.patch("main.pygame_menu.events", MagicMock())

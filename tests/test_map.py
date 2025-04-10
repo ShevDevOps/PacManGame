@@ -49,10 +49,13 @@ def test_map_initialization(game_map, simple_map_data):
             GhostState.EATEN,
             False,
         ),  # Позиція 'G' (стіна для EATEN, бо isRetPass=True)
-        (3, 2, GhostState.AFTER_EATEN, False),  # Позиція 'G' (стіна для AFTER_EATEN)
+        (3, 2, GhostState.AFTER_EATEN, False),
+        # Позиція 'G' (стіна для AFTER_EATEN)
         (2, 3, GhostState.NORMAL, False),  # Позиція 'g' (не стіна для NORMAL)
-        (2, 3, GhostState.EATEN, False),  # Позиція 'g' (прохідна для EATEN)
-        (2, 3, GhostState.AFTER_EATEN, False),  # Позиція 'g' (прохідна для AFTER_EATEN)
+        (2, 3, GhostState.EATEN, False),
+        # Позиція 'g' (прохідна для EATEN)
+        (2, 3, GhostState.AFTER_EATEN, False),
+        # Позиція 'g' (прохідна для AFTER_EATEN)
         (-1, 1, GhostState.NORMAL, True),  # За межами зліва
         (1, -1, GhostState.NORMAL, True),  # За межами зверху
         (5, 1, GhostState.NORMAL, True),  # За межами справа  (width=5)
@@ -68,9 +71,11 @@ def test_map_is_wall(game_map, x, y, state, expected):
 @pytest.mark.parametrize(
     "px, py, expected",
     [
-        (5, 5, True),  # У лівому верхньому куті стіни (0*16, 0*16) -> tile (0,0)
+        (5, 5, True),
+        # У лівому верхньому куті стіни (0*16, 0*16) -> tile (0,0)
         (24, 24, False),  # У центрі тайла 'C' (1*16+8, 1*16+8) -> tile (1,1)
-        (17, 24, False),  # На межі між (0,1) і (1,1) - ближче до (1,1) -> tile (1,1)
+        (17, 24, False),
+        # На межі між (0,1) і (1,1) - ближче до (1,1) -> tile (1,1)
         (
             15,
             24,
@@ -81,7 +86,8 @@ def test_map_is_wall(game_map, x, y, state, expected):
     ],
 )
 def test_map_is_intersect(game_map, px, py, expected):
-    """Тестує метод isIntersect для перевірки перетину піксельних координат зі стінами."""
+    """Тестує метод isIntersect
+    для перевірки перетину піксельних координат зі стінами."""
     assert game_map.isIntersect(px, py) == expected
 
 
