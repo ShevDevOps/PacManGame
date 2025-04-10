@@ -21,6 +21,10 @@ def mock_game_for_ghost():
     return game_mock
 
 
+def target_func(g):
+    return (10, 10)
+
+
 @pytest.fixture
 def ghost_instance(mock_map_for_ghost, mock_game_for_ghost, mocker):
     mocker.patch("main.pygame.image.load", return_value=MagicMock())
@@ -39,7 +43,7 @@ def ghost_instance(mock_map_for_ghost, mock_game_for_ghost, mocker):
         [dummy_surface, dummy_surface],  # 4: scared
         [dummy_surface],  # 5: eaten
     ]
-    target_func = lambda g: (10, 10)
+    # target_func = lambda g: (10, 10)
 
     ghost = Ghost(
         map=mock_map_for_ghost,
