@@ -56,3 +56,20 @@ pip install -r requirements.txt
 
 # Run the game
 python main.py
+```
+
+---
+
+## Testing & Quality Assurance
+
+The codebase includes an extensive suite of **164 unit tests** covering collision mechanics, state transitions, leaderboard operations, and resource loaders.
+
+```bash
+# Run test suite
+pytest
+
+# Run tests with coverage
+pytest --cov=.
+```
+
+All pushes and pull requests are validated via **GitHub Actions** (`python-app.yml`), running static linting with `flake8` and executing the full `pytest` suite on Ubuntu runners.
